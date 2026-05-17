@@ -56,6 +56,13 @@ const NON_PET_NAME_HINTS: Array<[RegExp, ItemCategory]> = [
   [/\bgift\b/i, "gift"],
   [/\bstroller\b/i, "stroller"],
   [/\b(scooter|airboat|board|car|truck|bike)\b/i, "vehicle"],
+  // Same end-anchored "actually-a-food-item" heuristic as the AMVerse adapter.
+  // Keep these in sync with src/server/sources/amverse.ts inferCategory().
+  [
+    /\b(cake|cookie|brownie|donut|doughnut|cupcake|pancake|waffle|muffin|tart|pie|pudding|jellybean|lollipop|popsicle|gumball|sundae|sorbet|burger|fries|nugget|nuggets|sushi|salad|taco|burrito|wrap|bread|pizza)$/i,
+    "food",
+  ],
+  [/^(slice of|bowl of|plate of) /i, "food"],
   [
     /\b(hat|headset|glasses|crown|necklace|bag|hood|sword|propeller|wings?|halo|hoverboard)\b/i,
     "pet_wear",

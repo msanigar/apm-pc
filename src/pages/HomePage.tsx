@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ItemCategory } from "@shared/types";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { SearchBox } from "@/components/SearchBox";
@@ -11,6 +11,14 @@ export function HomePage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ItemCategory | null>(null);
   const { items, fuse, isLoading, error, generatedAt } = useSearchIndex();
+
+  // Only show filter chips for categories that actually have items in this
+  // dataset. Otherwise we'd tease the user with empty buckets like "Food".
+  const availableCategories = useMemo(() => {
+    const set = new Set<ItemCategory>();
+    for (const item of items) set.add(item.category);
+    return set;
+  }, [items]);
 
   useEffect(() => {
     function onExample(e: Event) {
@@ -42,7 +50,11 @@ export function HomePage() {
         <h2 className="px-1 text-xs font-extrabold uppercase tracking-widest text-slate-500">
           Filter by type
         </h2>
-        <CategoryFilter selected={category} onSelect={setCategory} />
+        <CategoryFilter
+          selected={category}
+          onSelect={setCategory}
+          availableCategories={availableCategories}
+        />
       </div>
 
       {error && (
@@ -59,6 +71,7 @@ export function HomePage() {
           items={items}
           query={query}
           category={category}
+          onClearCategory={() => setCategory(null)}
         />
       )}
 

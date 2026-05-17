@@ -5,6 +5,13 @@ import { CATEGORY_OPTIONS } from "@/lib/theme";
 type Props = {
   selected: ItemCategory | null;
   onSelect: (category: ItemCategory | null) => void;
+  /**
+   * Categories that should be shown in the filter row. If undefined, all
+   * categories appear. Typically populated from the live search index so we
+   * don't tease users with an empty bucket like "Food" when none of the
+   * adapters carry food data yet.
+   */
+  availableCategories?: ReadonlySet<ItemCategory>;
 };
 
 const CATEGORY_ORDER: ItemCategory[] = [
@@ -23,7 +30,19 @@ const ORDERED = CATEGORY_ORDER.map((key) =>
   CATEGORY_OPTIONS.find((o) => o.key === key)!
 ).filter(Boolean);
 
-export function CategoryFilter({ selected, onSelect }: Props) {
+export function CategoryFilter({
+  selected,
+  onSelect,
+  availableCategories,
+}: Props) {
+  const visible = ORDERED.filter(
+    ({ key }) =>
+      !availableCategories ||
+      availableCategories.has(key) ||
+      // Keep an already-active chip visible even if it just became empty,
+      // so the user always has a way to deselect it.
+      key === selected
+  );
   return (
     <div className="flex flex-wrap gap-2">
       <CategoryPill
@@ -33,7 +52,7 @@ export function CategoryFilter({ selected, onSelect }: Props) {
         activeClass="bg-gradient-to-br from-brand-500 to-bubble-500 text-white shadow-md"
         inactiveClass="bg-white text-slate-700 ring-1 ring-slate-200"
       />
-      {ORDERED.map(({ key, theme }) => {
+      {visible.map(({ key, theme }) => {
         const isActive = selected === key;
         return (
           <CategoryPill

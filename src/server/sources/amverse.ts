@@ -113,6 +113,17 @@ function inferCategory(name: string): ItemCategory {
   if (/\bstroller\b/.test(n)) return "stroller";
   if (/\b(toy|plushie|sticker|chew toy|rattle|box)\b/.test(n)) return "toy";
   if (/\bgift\b/.test(n)) return "gift";
+  // Food / consumables. Word-boundary matched so we don't grab pet names that
+  // happen to contain a food word (e.g. "Pancake Stack" is a pet, "Candy Apple"
+  // is a pet). We anchor to the END of the name where possible so genuine
+  // consumables ("Birthday Cake", "Slice of Pizza") win.
+  if (
+    /\b(cake|cookie|brownie|donut|doughnut|cupcake|pancake|waffle|muffin|tart|pie|pudding|jellybean|lollipop|popsicle|gumball|sundae|sorbet|burger|fries|nugget|nuggets|sushi|salad|taco|burrito|wrap|bread|pizza)$/.test(
+      n
+    ) ||
+    /^(slice of|bowl of|plate of) /.test(n)
+  )
+    return "food";
   if (
     /\b(hat|headset|glasses|crown|necklace|bag|hood|sword|propeller|wings?|halo|hoverboard|drape|scarf|cape|shoes|lanyard|pin|backpack)\b/.test(
       n

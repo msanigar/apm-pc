@@ -4,12 +4,14 @@ import type { ItemCategory, SearchIndexItem, Variant } from "@shared/types";
 import { parseSearchQuery } from "@shared/parseSearchQuery";
 import { ResultCard } from "./ResultCard";
 import { getCategoryTheme } from "@/lib/theme";
+import { XIcon } from "@/components/icons";
 
 type Props = {
   fuse: Fuse<SearchIndexItem> | null;
   items: SearchIndexItem[];
   query: string;
   category?: ItemCategory | null;
+  onClearCategory?: () => void;
   /** How many results to show in the first page. The user can load more in 25-row pages. */
   pageSize?: number;
 };
@@ -19,6 +21,7 @@ export function SearchResults({
   items,
   query,
   category = null,
+  onClearCategory,
   pageSize = 25,
 }: Props) {
   const parsed = useMemo(() => parseSearchQuery(query), [query]);
@@ -88,12 +91,22 @@ export function SearchResults({
   const total = ranked.length;
   const visible = ranked.slice(0, visibleCount);
 
+  // Did Fuse find matches that got filtered out by the active category? If so
+  // we want to nudge the user — "Hey, your filter is hiding them."
+  const totalUnfiltered =
+    parsed.normalizedQuery && fuse
+      ? fuse.search(parsed.normalizedQuery, { limit: 50 }).length
+      : 0;
+  const filterIsHidingMatches =
+    visible.length === 0 && category != null && totalUnfiltered > 0;
+
   if (visible.length === 0) {
     const what = query.trim()
       ? `\u201C${query}\u201D`
       : category
         ? `the ${getCategoryTheme(category).label} category`
         : "your search";
+    const categoryLabel = category ? getCategoryTheme(category).label : null;
     return (
       <div className="rounded-3xl border-2 border-dashed border-brand-200 bg-white/70 p-8 text-center shadow-sm">
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-bubble-100 text-3xl">
@@ -102,20 +115,50 @@ export function SearchResults({
         <p className="text-base font-bold text-slate-700">
           Nothing found for {what}.
         </p>
-        <p className="mt-1 text-sm text-slate-500">
-          Try fewer letters, or pick a different category.
-        </p>
+        {filterIsHidingMatches && categoryLabel && onClearCategory ? (
+          <>
+            <p className="mt-1 text-sm text-slate-500">
+              The <span className="font-bold">{categoryLabel}</span> filter is
+              hiding {totalUnfiltered} other{" "}
+              {totalUnfiltered === 1 ? "match" : "matches"}.
+            </p>
+            <button
+              type="button"
+              onClick={onClearCategory}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-bubble-500 px-4 py-2 text-sm font-extrabold text-white shadow-md transition hover:-translate-y-0.5 active:scale-95"
+            >
+              Clear filter
+            </button>
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-slate-500">
+            Try fewer letters, or pick a different category.
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-xs font-semibold text-slate-500">
-        Showing <span className="text-slate-700">{visible.length}</span> of{" "}
-        <span className="text-slate-700">{total}</span>{" "}
-        {total === 1 ? "match" : "matches"}
-      </p>
+      <div className="flex flex-wrap items-center gap-2 px-1 text-xs font-semibold text-slate-500">
+        <span>
+          Showing <span className="text-slate-700">{visible.length}</span> of{" "}
+          <span className="text-slate-700">{total}</span>{" "}
+          {total === 1 ? "match" : "matches"}
+        </span>
+        {category && onClearCategory && (
+          <button
+            type="button"
+            onClick={onClearCategory}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition hover:opacity-80 ${getCategoryTheme(category).badgeClass}`}
+            title="Clear category filter"
+          >
+            {getCategoryTheme(category).label} filter active
+            <XIcon size={12} />
+          </button>
+        )}
+      </div>
 
       <ol className="space-y-3">
         {visible.map((item, idx) => (
