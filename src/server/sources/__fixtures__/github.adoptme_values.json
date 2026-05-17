@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "note": "Representative fixture. The real ironbabatekkral/adoptme-values payload may use different field names — see githubStaticDataset.ts for the defensive parser.",
+    "updated_at": "2026-05-15T12:00:00Z"
+  },
+  "items": [
+    {
+      "name": "Shadow Dragon",
+      "category": "pet",
+      "rarity": "legendary",
+      "image": "images/shadow-dragon.png",
+      "values": {
+        "normal": 128,
+        "ride": 134,
+        "fly": 138,
+        "fly_ride": 152,
+        "neon": 525,
+        "neon_ride": 565,
+        "neon_fly": 585,
+        "neon_fly_ride": 615,
+        "mega": 2150,
+        "mega_fly_ride": 2450
+      }
+    },
+    {
+      "name": "Frost Dragon",
+      "category": "pet",
+      "rarity": "legendary",
+      "image": "images/frost-dragon.png",
+      "values": {
+        "normal": 72,
+        "ride": 80,
+        "fly": 85,
+        "fly_ride": 92,
+        "neon": 350,
+        "neon_fly_ride": 410,
+        "mega_fly_ride": 1520
+      }
+    },
+    {
+      "name": "Ride Potion",
+      "category": "potion",
+      "rarity": "ultra-rare",
+      "image": "images/ride-potion.png",
+      "values": { "normal": 88 }
+    },
+    {
+      "name": "Cow",
+      "category": "pet",
+      "rarity": "rare",
+      "image": "",
+      "values": {
+        "normal": 6,
+        "neon": 30,
+        "neon_fly_ride": "42"
+      }
+    },
+    {
+      "name": "Unknown Empty",
+      "category": "pet",
+      "rarity": "common",
+      "image": "",
+      "values": {
+        "normal": null,
+        "neon": "—"
+      }
+    }
+  ]
+}

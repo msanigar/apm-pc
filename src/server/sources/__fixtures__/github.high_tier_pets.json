@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "note": "Representative fixture mirroring Roblox-Services/High-Tier-Adopt-Me-Values pets.json.txt shape (loose-JSON list of high-tier pets). Adjust fields with the real schema once verified."
+  },
+  "pets": [
+    {
+      "name": "Shadow Dragon",
+      "rarity": "legendary",
+      "tier": "S",
+      "values": { "neon_fly_ride": 605, "mega_fly_ride": 2450 }
+    },
+    {
+      "name": "Kitsune",
+      "rarity": "legendary",
+      "tier": "A",
+      "values": { "neon_fly_ride": 810 }
+    },
+    {
+      "name": "Owl",
+      "rarity": "legendary",
+      "tier": "B",
+      "values": { "mega_fly_ride": 620 }
+    }
+  ]
+}

@@ -160,28 +160,57 @@ mean otherwise — see `src/shared/aggregate.ts`.
 
 ---
 
-## Adding a real source adapter
+## Source adapters
 
-1. Create `src/server/sources/myAdapter.ts`:
+All adapters live in `src/server/sources/`. Each one is a `SourceAdapter`
+returning `RawSourceValue[]`. Adapters MUST NOT be imported from frontend
+code; they are only ever called from the scheduled sync function.
 
-   ```ts
-   import type { SourceAdapter } from "./types";
-   import type { RawSourceValue } from "../../shared/normalize";
+### Built-in adapters
 
-   export const myAdapter: SourceAdapter = {
-     name: "trading-values",
-     description: "Trading Values community site",
-     async fetchValues(): Promise<RawSourceValue[]> {
-       // Hit the source, return canonical RawSourceValue rows.
-     },
-   };
-   ```
-2. Register it in `src/server/sources/index.ts` (`REGISTRY` map).
-3. Either remove a mock adapter or set
-   `VALUE_SOURCE_ADAPTERS=trading-values,mock-a,mock-b` in your env.
+| Source                | Internal source name(s)                       | Default | Env flag                          |
+| --------------------- | --------------------------------------------- | ------- | --------------------------------- |
+| Mock A / B / C        | `mock-a`, `mock-b`, `mock-c`                  | on      | (always available)                |
+| AMVerse               | `amverse_elvebredd`, `amverse_amvgg`          | off     | `ENABLE_AMVERSE=1`                |
+| Adopt Me Trading Vals | `adoptmetradingvalues`                        | off     | `ENABLE_ADOPT_ME_TRADING_VALUES=1`|
+| └ legacy `.com` mirror| `adoptmetradingvalues_legacy`                 | off     | `ENABLE_AMTV_LEGACY_MIRROR=1`     |
+| GitHub static dataset | `github_ironbabatekkral`                      | off     | `ENABLE_GITHUB_DATASET=1`         |
+| └ high-tier fallback  | `github_high_tier`                            | off     | `ENABLE_GITHUB_HIGH_TIER=1`       |
 
-Adapters MUST NOT be called from frontend requests. The sync function is the
-only entry point.
+`VALUE_SOURCE_ADAPTERS` can override the selection:
+
+- unset → all adapters whose `ENABLE_*` flag is on, plus the mocks.
+- `mock-only` → just the three mocks.
+- comma-separated list of names → only those, in that order.
+
+Each real adapter is wrapped in `safeAdapter()`, so a single failing source
+returns `[]` instead of breaking the whole sync. The validation step decides
+whether the import is still healthy.
+
+### Why two source names from AMVerse?
+
+The AMVerse values page is itself a meta-aggregator of two community
+sources (Elvebredd and AMVGG). We split it into two logical sources so
+median aggregation across all enabled sources gets two independent votes
+from AMVerse rather than one fused one.
+
+### Adding a brand-new adapter
+
+1. Create `src/server/sources/myAdapter.ts`. The file should export a
+   `buildMyAdapter(options): SourceAdapter[]` factory.
+2. Use the shared helpers in `lib.ts` for HTTP (`fetchText`/`fetchJson`),
+   value parsing (`parseRpValue`), image URL normalisation
+   (`resolveImageUrl`), row building (`normalizeSourceValue`), and
+   error/disable wrapping (`safeAdapter`).
+3. Add a representative HTML/JSON fixture under
+   `src/server/sources/__fixtures__/` and a fixture-based test in
+   `src/server/sources/__tests__/`. Do **not** hit live network in tests.
+4. Register the adapter (and its env flag) in
+   `src/server/sources/index.ts`.
+5. Verify the source's terms of service before enabling in production.
+   Image caching is opt-in per source — surface an `imageUrl` from the
+   adapter, but leave the cache step disabled until image-use terms are
+   confirmed.
 
 ---
 

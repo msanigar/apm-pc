@@ -1,0 +1,57 @@
+<!--
+  Representative fixture for adoptmetradingvalues.org/values/ (the
+  AMTV value list page). Adjust selectors and this fixture together when
+  the live structure differs.
+
+  Assumed structure:
+    - A single value table (`table.value-list`) with one row per item.
+    - Columns: thumbnail, name, category, rarity, value (in RP).
+    - The thumbnail is an <img> with an absolute or root-relative src.
+    - Missing values shown as "—" / "N/A".
+-->
+<!doctype html>
+<html lang="en">
+  <body>
+    <table class="value-list">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Rarity</th>
+          <th>Value (RP)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="item-row" data-slug="shadow-dragon">
+          <td><img src="/images/items/shadow-dragon.png" alt=""/></td>
+          <td>Shadow Dragon</td>
+          <td>Pet</td>
+          <td>Legendary</td>
+          <td>140</td>
+        </tr>
+        <tr class="item-row" data-slug="frost-dragon">
+          <td><img src="https://cdn.example.com/items/frost-dragon.png" alt=""/></td>
+          <td>Frost Dragon</td>
+          <td>Pet</td>
+          <td>Legendary</td>
+          <td>75</td>
+        </tr>
+        <tr class="item-row" data-slug="ride-potion">
+          <td><img src="//cdn.example.com/items/ride-potion.png" alt=""/></td>
+          <td>Ride Potion</td>
+          <td>Potion</td>
+          <td>Ultra-Rare</td>
+          <td>92</td>
+        </tr>
+        <tr class="item-row" data-slug="kitsune">
+          <td></td>
+          <td>Kitsune</td>
+          <td>Pet</td>
+          <td>Legendary</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

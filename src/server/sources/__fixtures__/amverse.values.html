@@ -1,0 +1,87 @@
+<!--
+  Representative fixture for amverse.co/values.
+
+  This is NOT a verbatim capture of the live page — it is a small,
+  representative snapshot of the structure the adapter targets:
+
+    - A page-level container.
+    - A table per pet/item with one row per source (Elvebredd, AMVGG) and
+      one column per variant (Regular, Neon, Mega).
+    - Some cells with "—" to mean "no value".
+    - One row with the source key in a class (`.src-elvebredd`, `.src-amvgg`)
+      and the item name as a data attribute on the parent.
+
+  When the live page structure differs, update both this fixture and the
+  selectors in `amverse.ts` together so the tests stay meaningful.
+-->
+<!doctype html>
+<html lang="en">
+  <body>
+    <main class="values">
+      <article class="item-card" data-name="Shadow Dragon" data-category="pet" data-rarity="legendary">
+        <h2>Shadow Dragon</h2>
+        <table class="values-table">
+          <thead>
+            <tr><th>Source</th><th>Regular</th><th>Neon</th><th>Mega</th></tr>
+          </thead>
+          <tbody>
+            <tr class="row src-elvebredd">
+              <td>Elvebredd</td>
+              <td>125</td>
+              <td>520</td>
+              <td>2,100</td>
+            </tr>
+            <tr class="row src-amvgg">
+              <td>AMVGG</td>
+              <td>130</td>
+              <td>540</td>
+              <td>2.2k</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="item-card" data-name="Frost Dragon" data-category="pet" data-rarity="legendary">
+        <h2>Frost Dragon</h2>
+        <table class="values-table">
+          <thead>
+            <tr><th>Source</th><th>Regular</th><th>Neon</th><th>Mega</th></tr>
+          </thead>
+          <tbody>
+            <tr class="row src-elvebredd">
+              <td>Elvebredd</td>
+              <td>70</td>
+              <td>340</td>
+              <td>—</td>
+            </tr>
+            <tr class="row src-amvgg">
+              <td>AMVGG</td>
+              <td>72</td>
+              <td>N/A</td>
+              <td>1,400</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="item-card" data-name="Ride Potion" data-category="potion" data-rarity="ultra-rare">
+        <h2>Ride Potion</h2>
+        <table class="values-table">
+          <thead>
+            <tr><th>Source</th><th>Regular</th></tr>
+          </thead>
+          <tbody>
+            <tr class="row src-elvebredd">
+              <td>Elvebredd</td>
+              <td>90</td>
+            </tr>
+            <tr class="row src-amvgg">
+              <td>AMVGG</td>
+              <td>95</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+    </main>
+  </body>
+</html>
