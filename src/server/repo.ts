@@ -22,6 +22,49 @@ import type { ValidationIssue } from "../shared/validate";
  * Functions stay thin.
  */
 
+/**
+ * Max rows per Supabase insert/upsert request. PostgREST defaults cap the
+ * request body around ~1 MB; with ~150 bytes per row that translates to a
+ * safe ceiling well below 1000. We pick 500 so even a wide row (lots of
+ * columns or long aliases) still fits comfortably.
+ */
+const PG_BULK_CHUNK = 500;
+
+/**
+ * Generic chunked insert/upsert. Returns the count of payload rows the
+ * caller passed in (Supabase doesn't reliably echo back inserted counts for
+ * large batches, and we don't need them).
+ */
+async function bulkInsert<T extends Record<string, unknown>>(
+  table: string,
+  payload: T[],
+  options?: { upsert?: boolean; onConflict?: string; ignoreDuplicates?: boolean }
+): Promise<number> {
+  if (payload.length === 0) return 0;
+  const db = requireSupabaseAdmin();
+  for (let i = 0; i < payload.length; i += PG_BULK_CHUNK) {
+    const chunk = payload.slice(i, i + PG_BULK_CHUNK);
+    // Supabase's generated insert/upsert types are very strict about excess
+    // properties and we're feeding heterogeneous row shapes from several
+    // tables through this helper, so cast to a loose record shape.
+    const query = db.from(table) as unknown as {
+      insert: (rows: unknown) => Promise<{ error: unknown }>;
+      upsert: (
+        rows: unknown,
+        opts: { onConflict?: string; ignoreDuplicates?: boolean }
+      ) => Promise<{ error: unknown }>;
+    };
+    const { error } = options?.upsert
+      ? await query.upsert(chunk, {
+          onConflict: options.onConflict,
+          ignoreDuplicates: options.ignoreDuplicates ?? false,
+        })
+      : await query.insert(chunk);
+    if (error) throw error;
+  }
+  return payload.length;
+}
+
 export type ItemUpsert = {
   slug: string;
   name: string;
@@ -67,13 +110,17 @@ export async function upsertItems(items: ItemUpsert[]): Promise<Map<string, stri
     image_path: i.imagePath ?? null,
     updated_at: new Date().toISOString(),
   }));
-  const { data, error } = await db
-    .from("items")
-    .upsert(payload, { onConflict: "slug" })
-    .select("id, slug");
-  if (error) throw error;
   const map = new Map<string, string>();
-  for (const row of data ?? []) map.set(row.slug as string, row.id as string);
+  // Upsert in chunks; we still need ids back, so we issue a SELECT after.
+  for (let i = 0; i < payload.length; i += PG_BULK_CHUNK) {
+    const chunk = payload.slice(i, i + PG_BULK_CHUNK);
+    const { data, error } = await db
+      .from("items")
+      .upsert(chunk, { onConflict: "slug" })
+      .select("id, slug");
+    if (error) throw error;
+    for (const row of data ?? []) map.set(row.slug as string, row.id as string);
+  }
   return map;
 }
 
@@ -83,7 +130,6 @@ export async function promoteCandidateRows(
   now: Date = new Date()
 ): Promise<number> {
   if (rows.length === 0) return 0;
-  const db = requireSupabaseAdmin();
 
   const payload = rows
     .map((r) => {
@@ -108,13 +154,10 @@ export async function promoteCandidateRows(
     })
     .filter(Boolean) as Record<string, unknown>[];
 
-  if (payload.length === 0) return 0;
-
-  const { error } = await db
-    .from("aggregated_values")
-    .upsert(payload, { onConflict: "item_id,variant" });
-  if (error) throw error;
-  return payload.length;
+  return bulkInsert("aggregated_values", payload, {
+    upsert: true,
+    onConflict: "item_id,variant",
+  });
 }
 
 /**
@@ -127,7 +170,6 @@ export async function storeSuspiciousCandidates(
   now: Date = new Date()
 ): Promise<number> {
   if (rows.length === 0) return 0;
-  const db = requireSupabaseAdmin();
 
   const payload = rows
     .map((r) => {
@@ -144,18 +186,10 @@ export async function storeSuspiciousCandidates(
     })
     .filter(Boolean) as Record<string, unknown>[];
 
-  if (payload.length === 0) return 0;
-
-  // We don't have an existing row guaranteed here, but the unique
-  // (item_id, variant) constraint lets us upsert safely.
-  const { error } = await db
-    .from("aggregated_values")
-    .upsert(payload, {
-      onConflict: "item_id,variant",
-      ignoreDuplicates: false,
-    });
-  if (error) throw error;
-  return payload.length;
+  return bulkInsert("aggregated_values", payload, {
+    upsert: true,
+    onConflict: "item_id,variant",
+  });
 }
 
 export async function recordSourceValues(
@@ -164,7 +198,6 @@ export async function recordSourceValues(
   now: Date = new Date()
 ): Promise<number> {
   if (rows.length === 0) return 0;
-  const db = requireSupabaseAdmin();
   const payload: Record<string, unknown>[] = [];
   for (const r of rows) {
     const itemId = slugToId.get(r.itemSlug);
@@ -179,10 +212,7 @@ export async function recordSourceValues(
       });
     }
   }
-  if (payload.length === 0) return 0;
-  const { error } = await db.from("source_values").insert(payload);
-  if (error) throw error;
-  return payload.length;
+  return bulkInsert("source_values", payload);
 }
 
 export async function createImportRun(): Promise<{ id: string; startedAt: Date }> {
@@ -234,7 +264,6 @@ export async function saveValidationIssues(
   slugToId: Map<string, string>
 ): Promise<void> {
   if (issues.length === 0) return;
-  const db = requireSupabaseAdmin();
   const payload = issues.map((i) => ({
     import_run_id: runId,
     item_id: i.itemSlug ? slugToId.get(i.itemSlug) ?? null : null,
@@ -245,8 +274,7 @@ export async function saveValidationIssues(
     percent_change: i.percentChange ?? null,
     severity: i.severity,
   }));
-  const { error } = await db.from("import_validation_issues").insert(payload);
-  if (error) throw error;
+  await bulkInsert("import_validation_issues", payload);
 }
 
 export async function getLatestImportRun(): Promise<ImportRunSummary | null> {
@@ -278,28 +306,51 @@ export async function getLatestImportRun(): Promise<ImportRunSummary | null> {
 
 export async function loadSearchIndex(): Promise<SearchIndexItem[]> {
   const db = requireSupabaseAdmin();
-  const { data: items, error } = await db
-    .from("items")
-    .select(
-      "id, slug, name, category, rarity, aliases, image_path, is_high_tier"
-    );
-  if (error) throw error;
-  if (!items || items.length === 0) return [];
 
-  const itemIds = items.map((i: any) => i.id);
-  const { data: aggs, error: aggErr } = await db
-    .from("aggregated_values")
-    .select(
-      "item_id, variant, value_rp, min_rp, max_rp, source_count, confidence, is_suspicious, last_accepted_at, last_candidate_value_rp, last_candidate_at, calculated_at"
-    )
-    .in("item_id", itemIds);
-  if (aggErr) throw aggErr;
+  // Items table can hold tens of thousands of rows. Page in 1000-row
+  // chunks (PostgREST's default cap) to avoid silent truncation.
+  const items: any[] = [];
+  const PAGE = 1000;
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await db
+      .from("items")
+      .select(
+        "id, slug, name, category, rarity, aliases, image_path, is_high_tier"
+      )
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    items.push(...data);
+    if (data.length < PAGE) break;
+  }
+  if (items.length === 0) return [];
 
+  // Aggregated values: same pagination concern, plus PostgREST URL-length
+  // limits on the `in(item_id, …)` clause once the id list grows past a few
+  // hundred. Chunk both the id filter and the row range.
   const byItem = new Map<string, AggregatedVariantValue[]>();
-  for (const a of aggs ?? []) {
-    const arr = byItem.get(a.item_id as string) ?? [];
-    arr.push(mapAggregated(a));
-    byItem.set(a.item_id as string, arr);
+  const ID_CHUNK = 200;
+  for (let i = 0; i < items.length; i += ID_CHUNK) {
+    const chunk = items.slice(i, i + ID_CHUNK).map((it) => it.id as string);
+    let offset = 0;
+    while (true) {
+      const { data: aggs, error: aggErr } = await db
+        .from("aggregated_values")
+        .select(
+          "item_id, variant, value_rp, min_rp, max_rp, source_count, confidence, is_suspicious, last_accepted_at, last_candidate_value_rp, last_candidate_at, calculated_at"
+        )
+        .in("item_id", chunk)
+        .range(offset, offset + PAGE - 1);
+      if (aggErr) throw aggErr;
+      if (!aggs || aggs.length === 0) break;
+      for (const a of aggs) {
+        const arr = byItem.get(a.item_id as string) ?? [];
+        arr.push(mapAggregated(a));
+        byItem.set(a.item_id as string, arr);
+      }
+      if (aggs.length < PAGE) break;
+      offset += PAGE;
+    }
   }
 
   return items.map((i: any) => buildSearchIndexItem(i, byItem.get(i.id) ?? []));

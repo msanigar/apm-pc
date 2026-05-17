@@ -1,87 +1,640 @@
-<!--
-  Representative fixture for amverse.co/values.
-
-  This is NOT a verbatim capture of the live page — it is a small,
-  representative snapshot of the structure the adapter targets:
-
-    - A page-level container.
-    - A table per pet/item with one row per source (Elvebredd, AMVGG) and
-      one column per variant (Regular, Neon, Mega).
-    - Some cells with "—" to mean "no value".
-    - One row with the source key in a class (`.src-elvebredd`, `.src-amvgg`)
-      and the item name as a data attribute on the parent.
-
-  When the live page structure differs, update both this fixture and the
-  selectors in `amverse.ts` together so the tests stay meaningful.
--->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <body>
-    <main class="values">
-      <article class="item-card" data-name="Shadow Dragon" data-category="pet" data-rarity="legendary">
-        <h2>Shadow Dragon</h2>
-        <table class="values-table">
-          <thead>
-            <tr><th>Source</th><th>Regular</th><th>Neon</th><th>Mega</th></tr>
-          </thead>
-          <tbody>
-            <tr class="row src-elvebredd">
-              <td>Elvebredd</td>
-              <td>125</td>
-              <td>520</td>
-              <td>2,100</td>
-            </tr>
-            <tr class="row src-amvgg">
-              <td>AMVGG</td>
-              <td>130</td>
-              <td>540</td>
-              <td>2.2k</td>
-            </tr>
-          </tbody>
-        </table>
-      </article>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#e91e8c" />
+  <meta name="mobile-web-app-capable" content="yes" />
 
-      <article class="item-card" data-name="Frost Dragon" data-category="pet" data-rarity="legendary">
-        <h2>Frost Dragon</h2>
-        <table class="values-table">
-          <thead>
-            <tr><th>Source</th><th>Regular</th><th>Neon</th><th>Mega</th></tr>
-          </thead>
-          <tbody>
-            <tr class="row src-elvebredd">
-              <td>Elvebredd</td>
-              <td>70</td>
-              <td>340</td>
-              <td>—</td>
-            </tr>
-            <tr class="row src-amvgg">
-              <td>AMVGG</td>
-              <td>72</td>
-              <td>N/A</td>
-              <td>1,400</td>
-            </tr>
-          </tbody>
-        </table>
-      </article>
+  <!-- Primary SEO -->
+  <title>AMVerse ✦ - Adopt Me Pet Values</title>
+  <meta name="description" content="Browse and compare Adopt Me pet values from Elvebredd &amp; AMVGG side by side. Filter by rarity, search for any pet, view history charts, and use the trade calculator." />
+  <link rel="canonical" href="https://amverse.co/values" />
 
-      <article class="item-card" data-name="Ride Potion" data-category="potion" data-rarity="ultra-rare">
-        <h2>Ride Potion</h2>
-        <table class="values-table">
-          <thead>
-            <tr><th>Source</th><th>Regular</th></tr>
-          </thead>
-          <tbody>
-            <tr class="row src-elvebredd">
-              <td>Elvebredd</td>
-              <td>90</td>
-            </tr>
-            <tr class="row src-amvgg">
-              <td>AMVGG</td>
-              <td>95</td>
-            </tr>
-          </tbody>
-        </table>
-      </article>
-    </main>
-  </body>
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://amverse.co/values" />
+  <meta property="og:title"       content="AMVerse - Adopt Me Pet Values" />
+  <meta property="og:description" content="Browse Adopt Me pet values from Elvebredd &amp; AMVGG side by side. Filter, search, and compare in real time." />
+  <meta property="og:image"        content="https://amverse.co/images/og-image.webp" />
+  <meta property="og:image:alt"    content="AMVerse - Adopt Me Pet Values" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"       content="en_US" />
+  <meta property="og:site_name"    content="AMVerse" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:site"        content="@AmVerse99371" />
+  <meta name="twitter:title"       content="AMVerse - Adopt Me Pet Values" />
+  <meta name="twitter:description" content="Browse Adopt Me pet values from Elvebredd &amp; AMVGG side by side." />
+  <meta name="twitter:image"       content="https://amverse.co/images/og-image.webp" />
+
+  <!-- Favicon -->
+  <link rel="icon"             type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon"             type="image/png"     href="/images/LogoNoBG.png" sizes="any" />
+  <link rel="apple-touch-icon" sizes="180x180"      href="/images/LogoNoBG.png" />
+  <link rel="manifest"                              href="/manifest.json" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/css/values.bundle.css?v=1.42.3" />
+  <link rel="stylesheet" href="/cookieconsent/cookieconsent.min.css?v=1.42.3" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Adopt Me Pet Values",
+    "url": "https://amverse.co/values",
+    "description": "Browse and compare Adopt Me pet values from Elvebredd & AMVGG side by side. Filter by rarity, search for any pet, view history charts, and use the trade calculator.",
+    "isPartOf": { "@type": "WebSite", "name": "AMVerse", "url": "https://amverse.co/" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",       "item": "https://amverse.co/" },
+      { "@type": "ListItem", "position": 2, "name": "Pet Values", "item": "https://amverse.co/values" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "Adopt Me Pet Values — AMVerse",
+    "description": "Hourly-updated Adopt Me pet value data aggregated from Elvebredd and AMVGG. Includes Normal, Neon, and Mega tier values for all tracked pets, filterable by rarity and category.",
+    "url": "https://amverse.co/values",
+    "creator": { "@type": "Organization", "name": "AMVerse", "url": "https://amverse.co/" },
+    "keywords": ["Adopt Me", "pet values", "Roblox", "Elvebredd", "AMVGG", "trade calculator", "neon pets", "mega pets"],
+    "variableMeasured": [
+      { "@type": "PropertyValue", "name": "Regular Value", "description": "Normal tier pet value from Elvebredd and AMVGG" },
+      { "@type": "PropertyValue", "name": "Neon Value", "description": "Neon tier pet value from Elvebredd and AMVGG" },
+      { "@type": "PropertyValue", "name": "Mega Value", "description": "Mega tier pet value from Elvebredd and AMVGG" }
+    ],
+    "temporalCoverage": "2024-01-01/..",
+    "license": "https://amverse.co/terms",
+    "includedInDataCatalog": { "@type": "DataCatalog", "name": "AMVerse Pet Value Database" }
+  }
+  </script>
+
+  <!-- Anti-flash: apply saved theme before paint -->
+  <script>
+    (function () {
+      var t = localStorage.getItem('theme') || 'light';
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/brands.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" media="print" onload="this.media='all'" />
+</head>
+<body>
+  <div id="cc-overlay"></div>
+
+  <!-- Floating background decorations -->
+  <div class="bg-deco" aria-hidden="true">
+    <span class="deco d1">✦</span><span class="deco d2">✿</span>
+    <span class="deco d3">♡</span><span class="deco d4">✦</span>
+    <span class="deco d5">✿</span><span class="deco d6">♡</span>
+    <span class="deco d7">✦</span><span class="deco d8">✿</span>
+  </div>
+
+  <!-- Header (rendered by header.js; static nav for crawlers) -->
+  <header class="header" id="app-header">
+    <noscript>
+      <nav aria-label="Main navigation">
+        <a href="/">Home</a>
+        <a href="/values">Values</a>
+        <a href="/discord">Bot</a>
+        <a href="/about">About</a>
+      </nav>
+    </noscript>
+  </header>
+
+  <main class="main">
+
+
+<h1 class="values-page-title">Adopt Me Pet Values</h1>
+    <p class="values-page-intro">This table shows current Adopt Me pet values scraped hourly from <strong>Elvebredd</strong> (E) and <strong>AMVGG</strong> (A). Values represent the community-estimated trade worth of each pet in Normal, Neon, and Mega form. Use the filters to narrow by rarity or category, or click any pet to view its full value history and trade chart. A delta (Δ) badge appears when a value has changed since the last hourly update.</p>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="filter-input search-input"
+          placeholder="Search for a pet…" autocomplete="off" />
+      </div>
+      <select id="rarityFilter" class="filter-input filter-select">
+        <option value="">All Rarities ✦</option>
+      </select>
+      <select id="categoryFilter" class="filter-input filter-select">
+        <option value="">All Categories ✦</option>
+      </select>
+      <label class="filter-checkbox">
+        <input type="checkbox" id="hasValuesOnly" />
+        <span class="checkbox-custom"></span>
+        <span class="checkbox-label">Has values ✦</span>
+      </label>
+      <label class="filter-checkbox">
+        <input type="checkbox" id="changedOnly" />
+        <span class="checkbox-custom"></span>
+        <span class="checkbox-label">Changed only 💫</span>
+      </label>
+      <button id="devScrapeBtn" class="dev-scrape-btn" hidden>Scrape Now</button>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <span id="petCount" class="stat-item">- pets</span>
+      <span class="stat-div">✦</span>
+      <div class="stats-legend-wrap">
+        <span class="stats-legend-pill stats-legend-elve">
+          <span class="stats-legend-pill-badge">E</span>Elvebredd
+        </span>
+        <span class="stats-legend-sep">/</span>
+        <span class="stats-legend-pill stats-legend-amvgg">
+          <span class="stats-legend-pill-badge">A</span>AMVGG
+        </span>
+        <span class="stats-legend-delta">· Δ = change since last scrape</span>
+      </div>
+      <button id="deltaToggleBtn" class="delta-toggle-btn" aria-pressed="true">Δ Changes</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="pet-table">
+        <thead>
+          <tr>
+            <th class="col-img"></th>
+            <th class="col-name" data-sort="name">Name</th>
+            <th class="col-rarity" data-sort="rarity">Rarity</th>
+            <th class="col-val" data-sort="rvalue">Regular<div class="col-legend-single"><span class="dv-elve">E</span><span class="dv-sep"> / </span><span class="dv-amvgg">A</span></div></th>
+            <th class="col-val" data-sort="nvalue">Neon<div class="col-legend-single"><span class="dv-elve">E</span><span class="dv-sep"> / </span><span class="dv-amvgg">A</span></div></th>
+            <th class="col-val" data-sort="mvalue">Mega<div class="col-legend-single"><span class="dv-elve">E</span><span class="dv-sep"> / </span><span class="dv-amvgg">A</span></div></th>
+          </tr>
+        </thead>
+        <tbody id="petTableBody">
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/1-ribbon">#1 Ribbon</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.07 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/1000-bucks-silk-bag">1000 Bucks Silk Bag</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">1.5 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2021-uplift-butterfly">2021 Uplift Butterfly</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.15 / 0.006</td>
+          <td class="col-val">1.45 / 0.011</td>
+          <td class="col-val">5.75 / 0.04</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-5-badge">2022 Birthday 5 Badge</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.4 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-cake">2022 Birthday Cake</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">25 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-confetti-cannon">2022 Birthday Confetti Cannon</a></td>
+          <td class="col-rarity">legendary</td>
+          <td class="col-val">18 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-confetti-drape">2022 Birthday Confetti Drape</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.6 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-cupcake-shoes">2022 Birthday Cupcake Shoes</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">21 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-party-hat">2022 Birthday Party Hat</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">28 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-birthday-party-horn">2022 Birthday Party Horn</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">15 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2022-uplift-butterfly">2022 Uplift Butterfly</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.14 / 0.005</td>
+          <td class="col-val">1.4 / 0.01</td>
+          <td class="col-val">5.5 / 0.035</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2024-glasses">2024 Glasses</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.03 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2025-bauble-sticker">2025 Bauble Sticker</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.005 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2025-birthday-butterfly">2025 Birthday Butterfly</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.11 / 0.004</td>
+          <td class="col-val">1.25 / 0.007</td>
+          <td class="col-val">4.75 / 0.02</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2025-crown">2025 Crown</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.03 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2026-nye-glasses">2026 NYE Glasses</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-bone-chew-toy">2D Bone Chew Toy</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.004 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-box">2D Box</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-glasses">2D Glasses</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.15 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-kitty">2D Kitty</a></td>
+          <td class="col-rarity">legendary</td>
+          <td class="col-val">1.65 / 0.014</td>
+          <td class="col-val">9.5 / 0.058</td>
+          <td class="col-val">40 / 0.23</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-kitty-sticker">2D Kitty Sticker</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.002 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-pencil-rattle">2D Pencil Rattle</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.004 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/2d-top-hat">2D Top Hat</a></td>
+          <td class="col-rarity">uncommon</td>
+          <td class="col-val">0.07 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/3d-printer-hat">3D Printer Hat</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/a-d-o-p-t-lanyard">A.D.O.P.T. Lanyard</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.03 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/ar-headset">AR Headset</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">0.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/aberdeen-angus-box">Aberdeen Angus Box</a></td>
+          <td class="col-rarity">legendary</td>
+          <td class="col-val">0.06 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/abyss-propeller">Abyss Propeller</a></td>
+          <td class="col-rarity">legendary</td>
+          <td class="col-val">0.07 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/abyssinian-cat">Abyssinian Cat</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.06 / 0.003</td>
+          <td class="col-val">1.05 / 0.007</td>
+          <td class="col-val">3.75 / 0.015</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/accordion">Accordion</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">0.02 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/accordion-sticker">Accordion Sticker</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.002 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/ace-goose-sticker">Ace Goose Sticker</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.005 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/ace-pride-pin">Ace Pride Pin</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.001 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/acorn-plushie">Acorn Plushie</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.08 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/add">Add</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/admin-abuse-box">Admin Abuse Box</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.07 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/admin-abuse-egg">Admin Abuse Egg</a></td>
+          <td class="col-rarity">legendary</td>
+          <td class="col-val">0.12 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adopt-me-boy-scooter">Adopt Me Boy Scooter</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">2.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adopt-me-girl-scooter">Adopt Me Girl Scooter</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">2.1 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adopt-me-snowboard-1">Adopt Me Snowboard 1</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">5 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adopt-me-snowboard-2">Adopt Me Snowboard 2</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">5 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adventurer-s-hood">Adventurer's Hood</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.2 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/adventurer-s-sword">Adventurer's Sword</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">0.3 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/african-bead-necklace">African Bead Necklace</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.03 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/african-painted-dog-sticker">African Painted Dog Sticker</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.025 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/african-wild-dog">African Wild Dog</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">124 / 0.66</td>
+          <td class="col-val">410 / 2.125</td>
+          <td class="col-val">1,290 / 6.8</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/agender-pride-pin">Agender Pride Pin</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.001 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/agender-rat-sticker">Agender Rat Sticker</a></td>
+          <td class="col-rarity">rare</td>
+          <td class="col-val">0.005 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/airboat">Airboat</a></td>
+          <td class="col-rarity">common</td>
+          <td class="col-val">0.11 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+<tr class="ssr-pet-row">
+          <td class="col-img"></td>
+          <td class="col-name"><a href="/pet/airplane-propeller">Airplane Propeller</a></td>
+          <td class="col-rarity">ultra rare</td>
+          <td class="col-val">0.02 / —</td>
+          <td class="col-val">— / —</td>
+          <td class="col-val">— / —</td>
+        </tr>
+          <tr class="loading-row">
+            <td colspan="6">
+              <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <span>Loading pets…</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Discord CTA banner -->
+    <a class="discord-cta-banner" href="https://discord.gg/B4kcxXhWAA" target="_blank" rel="noopener noreferrer">
+      <span class="discord-cta-icon" aria-hidden="true"><i class="fa-brands fa-discord"></i></span>
+      <div class="discord-cta-body">
+        <strong>Join the AMVerse community on Discord</strong>
+        <span>Chat with other traders, share tips, and stay up to date on value changes.</span>
+      </div>
+      <span class="discord-cta-btn"><i class="fa-brands fa-discord"></i> Join free</span>
+    </a>
+
+    <!-- Explanatory content for crawlers and AI citation -->
+    <section class="about-section">
+      <h2>How to read the value table</h2>
+      <p>Each row shows a pet's Regular, Neon, and Mega tier values from two community sources: Elvebredd (E) and AMVGG (A). The two numbers in each cell represent the same pet on two different value lists. When both sources agree, that value is well-established by community consensus. When they differ, the spread is informative — it tells you the range of values you might encounter when trading. A delta (Δ) badge next to a value means that pet's price changed since the last hourly scrape. Click any row to view the pet's full value history chart and use the trade calculator for that pet directly.</p>
+
+      <h2>What do the rarity tiers mean?</h2>
+      <p>Adopt Me classifies every pet into one of five rarity tiers. Rarity generally correlates with trade value, though demand and limited availability can push even lower-rarity pets above their tier's typical range.</p>
+      <ul>
+        <li><strong>Common</strong> — Easily obtained from standard eggs. Low trade value. Examples: Cat, Dog, Chicken.</li>
+        <li><strong>Uncommon</strong> — Slightly harder to find. Minor value above Common. Examples: Horse, Bunny.</li>
+        <li><strong>Rare</strong> — Noticeably harder to obtain. Meaningful trade value. Examples: Beaver, Rabbit.</li>
+        <li><strong>Ultra-Rare</strong> — Difficult to obtain. Significant value. Examples: Hyena, Wolf, Platypus.</li>
+        <li><strong>Legendary</strong> — The hardest to obtain, highest trade value. Legendary pets like the Frost Dragon, Shadow Dragon, and Giraffe are among the most traded in the game.</li>
+      </ul>
+
+      <h2>Understanding the delta (Δ) indicator</h2>
+      <p>The delta badge shows how much a pet's value has changed since the previous hourly scrape. A positive delta (green, upward) means the value increased on that source since the last update. A negative delta (red, downward) means it decreased. Pets with active delta badges are currently experiencing value movement — useful to know before entering a trade involving that pet. Use the "Changed only" filter to see only pets with recent value changes.</p>
+    </section>
+
+  </main>
+
+  <!-- Floating Trade Calculator Button -->
+  <button class="trade-fab" id="tradeCalcBtn" aria-label="Open Trade Calculator">
+    ⚖ Trade
+  </button>
+
+  <!-- Footer (rendered by footer.js) -->
+  <footer class="site-footer" id="app-footer"></footer>
+
+  <!-- Cookie consent - GA only loads after explicit Accept -->
+  <script defer src="/cookieconsent/cookieconsent.min.js?v=1.42.3"></script>
+  <script defer src="/js/consent.js?v=1.42.3"></script>
+  <script type="module" src="/js/main-values.js?v=1.42.3"></script>
+</body>
 </html>

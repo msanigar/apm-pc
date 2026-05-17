@@ -245,10 +245,19 @@ Storage: create a public bucket named `adopt-me` (or override via
 1. **Set environment variables** in the Netlify site:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` _(server-only — never expose this)_
-   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` if you ever start
-     calling Supabase from the browser (the MVP doesn't).
-   - Optional: `SUPABASE_IMAGE_BUCKET`, `VALUE_SOURCE_ADAPTERS`.
+   - `SUPABASE_SERVICE_ROLE_KEY` — **mark as "Contains secret values"** in the
+     Netlify UI. This is the only env var that genuinely needs to be hidden;
+     it bypasses RLS.
+   - Optional: `SUPABASE_IMAGE_BUCKET`, `VALUE_SOURCE_ADAPTERS`, the
+     `ENABLE_*` adapter flags.
+   - **Do not** mark `SUPABASE_URL` or `SUPABASE_ANON_KEY` as secret. They
+     are designed to be public (anon key is gated by RLS) and marking them
+     as such will trip Netlify's build-time secret scanner. `netlify.toml`
+     already lists every safe-to-scan key under `SECRETS_SCAN_OMIT_KEYS` so
+     even if you do, the build won't break — but it's cleaner to leave them
+     unmarked.
+   - The browser never imports `VITE_SUPABASE_*` (it goes through the
+     `/api/*` functions), so those env vars aren't needed at all.
 2. **Connect the repo.** Netlify reads `netlify.toml`, runs `npm run build`,
    and publishes `dist/`. Functions are auto-bundled with esbuild.
 3. **Schedule.** The daily sync is defined in `netlify.toml` at

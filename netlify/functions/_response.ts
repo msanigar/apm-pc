@@ -39,7 +39,23 @@ export function badRequest(message: string): FnResponse {
 }
 
 export function serverError(err: unknown): FnResponse {
-  const message = err instanceof Error ? err.message : String(err);
+  // Always log the full error server-side: Supabase / PostgREST errors are
+  // plain objects whose `String(err)` is "[object Object]" — useless without
+  // the actual fields.
+  console.error("[function:server_error]", err);
+  let message: string;
+  if (err instanceof Error) {
+    message = err.message;
+  } else if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    message =
+      (e.message as string) ??
+      (e.hint as string) ??
+      (e.details as string) ??
+      JSON.stringify(err);
+  } else {
+    message = String(err);
+  }
   return {
     statusCode: 500,
     body: JSON.stringify({ error: "server_error", message }),

@@ -17,52 +17,44 @@ describe("parseAmtvHtml", () => {
     "https://adoptmetradingvalues.org"
   );
 
-  it("emits one row per item with a value", () => {
-    const names = rows.map((r) => r.sourceItemName).sort();
-    expect(names).toEqual(["Frost Dragon", "Ride Potion", "Shadow Dragon"]);
+  it("emits one row per pet that has a value", () => {
+    // The live fixture shows 39 pets in the Pet category.
+    expect(rows.length).toBeGreaterThanOrEqual(35);
+    expect(rows.length).toBeLessThanOrEqual(45);
   });
 
   it("uses the configured source name", () => {
     for (const r of rows) expect(r.sourceName).toBe("adoptmetradingvalues");
   });
 
-  it("parses values as RP numbers", () => {
-    expect(
-      rows.find((r) => r.sourceItemName === "Shadow Dragon")?.valueRp
-    ).toBe(140);
-    expect(
-      rows.find((r) => r.sourceItemName === "Frost Dragon")?.valueRp
-    ).toBe(75);
+  it("parses the headline RP value for known legendaries", () => {
+    const shadow = rows.find((r) => r.sourceItemName === "Shadow Dragon");
+    const bat = rows.find((r) => r.sourceItemName === "Bat Dragon");
+    const frost = rows.find((r) => r.sourceItemName === "Frost Dragon");
+    expect(shadow?.valueRp).toBe(650);
+    expect(bat?.valueRp).toBe(550);
+    expect(frost?.valueRp).toBe(400);
   });
 
-  it("ignores rows whose value is missing", () => {
-    expect(rows.find((r) => r.sourceItemName === "Kitsune")).toBeUndefined();
+  it("treats every row as the 'regular' variant", () => {
+    for (const r of rows) expect(r.variant).toBe("regular");
   });
 
-  it("resolves root-relative, absolute, and protocol-relative image URLs", () => {
-    expect(rows.find((r) => r.sourceItemName === "Shadow Dragon")?.imageUrl).toBe(
-      "https://adoptmetradingvalues.org/images/items/shadow-dragon.png"
-    );
-    expect(rows.find((r) => r.sourceItemName === "Frost Dragon")?.imageUrl).toBe(
-      "https://cdn.example.com/items/frost-dragon.png"
-    );
-    expect(rows.find((r) => r.sourceItemName === "Ride Potion")?.imageUrl).toBe(
-      "https://cdn.example.com/items/ride-potion.png"
-    );
+  it("maps the row's colour class to a rarity label", () => {
+    const shadow = rows.find((r) => r.sourceItemName === "Shadow Dragon");
+    expect(shadow?.confidence).toBe("legendary"); // we tunnel rarity through `confidence`
+    const wildBoar = rows.find((r) => r.sourceItemName === "Wild Boar");
+    expect(wildBoar?.confidence).toBe("uncommon");
   });
 
-  it("maps categories using the lookup table", () => {
-    expect(
-      rows.find((r) => r.sourceItemName === "Ride Potion")?.category
-    ).toBe("potion");
-    expect(
-      rows.find((r) => r.sourceItemName === "Shadow Dragon")?.category
-    ).toBe("pet");
+  it("resolves root-relative image URLs against the host", () => {
+    const shadow = rows.find((r) => r.sourceItemName === "Shadow Dragon");
+    expect(shadow?.imageUrl).toBe(
+      "https://adoptmetradingvalues.org/Adoptimage/shadow-dragon.png"
+    );
   });
 
   it("returns an empty list on empty HTML rather than crashing", () => {
-    expect(
-      parseAmtvHtml("<html><body></body></html>", "x", "https://x")
-    ).toEqual([]);
+    expect(parseAmtvHtml("<html><body></body></html>", "x", "https://x")).toEqual([]);
   });
 });

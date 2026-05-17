@@ -8,3 +8,6 @@ dist
 .DS_Store
 coverage
 .vite
+
+# Large snapshot fixtures used for catalog seeding only — too big for tests
+src/server/sources/__fixtures__/*.full.json

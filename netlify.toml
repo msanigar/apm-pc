@@ -3,6 +3,20 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Secrets scanning configuration.
+#
+# The truly-secret env var is `SUPABASE_SERVICE_ROLE_KEY` — it bypasses RLS
+# and must never appear in the client bundle or function output. Mark *only*
+# that one as "contains secrets" in the Netlify UI.
+#
+# Everything else listed below is either:
+#   - designed to be public (Supabase URL + anon key — RLS protects the DB), or
+#   - a feature flag / non-secret config value
+# so we tell Netlify's scanner to skip them. Without this, the scanner trips
+# on the anon-key JWT pattern even though it's safe to ship.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_IMAGE_BUCKET,VALUE_SOURCE_ADAPTERS,ENABLE_AMVERSE,ENABLE_ADOPT_ME_TRADING_VALUES,ENABLE_AMTV_LEGACY_MIRROR,ENABLE_GITHUB_DATASET,ENABLE_GITHUB_IRONBABA,ENABLE_GITHUB_HIGH_TIER"
+
 [dev]
   command = "npm run dev"
   port = 8888

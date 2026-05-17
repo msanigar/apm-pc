@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>gizmo.vals</title>
+
+<style>
+:root{
+  --bg:#1e1f24;
+  --bg2:#17181c;
+  --card:#2a2c33;
+  --slot:#353842;
+  --border:#4c5060;
+  --text:#ffffff;
+  --sub:#b7b9c3;
+
+  --mega:#8A30EE;
+  --neon:#89C63D;
+  --fly:#2E98C2;
+  --ride:#ED2E70;
+
+  --green:#43d675;
+  --red:#ff5f7b;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  background:linear-gradient(180deg,var(--bg),var(--bg2));
+  color:var(--text);
+  font-family:Arial, Helvetica, sans-serif;
+  min-height:100vh;
+}
+
+::-webkit-scrollbar{
+  width:8px;
+}
+
+::-webkit-scrollbar-thumb{
+  background:#555;
+  border-radius:10px;
+}
+
+.topbar{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  position:sticky;
+  top:0;
+  z-index:200;
+  background:rgba(18,18,18,.7);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.logo{
+  font-size:30px;
+  font-weight:800;
+  letter-spacing:.5px;
+}
+
+.topButtons{
+  position:absolute;
+  right:16px;
+  display:flex;
+  gap:10px;
+}
+
+.topBtn{
+  width:42px;
+  height:42px;
+  border:none;
+  border-radius:12px;
+  background:var(--card);
+  color:white;
+  cursor:pointer;
+  font-size:18px;
+  transition:.2s;
+}
+
+.topBtn:hover{
+  transform:translateY(-2px);
+}
+
+.mainWrap{
+  width:95%;
+  max-width:1200px;
+  margin:25px auto;
+}
+
+.heroCard{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:24px;
+  padding:18px;
+  margin-bottom:18px;
+}
+
+.heroTop{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.heroLeft h1{
+  font-size:32px;
+  margin-bottom:6px;
+}
+
+.heroLeft p{
+  color:var(--sub);
+  font-size:14px;
+}
+
+.serverBtn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:14px 18px;
+  background:#17b95e;
+  color:white;
+  text-decoration:none;
+  border-radius:14px;
+  font-weight:700;
+  transition:.2s;
+}
+
+.serverBtn:hover{
+  transform:scale(1.03);
+}
+
+.infoGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+  margin-top:16px;
+}
+
+.infoCard{
+  background:var(--card);
+  border-radius:16px;
+  padding:14px;
+}
+
+.infoCard h3{
+  margin-bottom:8px;
+}
+
+.infoCard p{
+  color:var(--sub);
+  font-size:13px;
+  line-height:1.5;
+}
+
+.tradeBox{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:24px;
+  padding:20px;
+}
+
+.tradeTitle{
+  text-align:center;
+  font-size:18px;
+  margin-bottom:16px;
+  opacity:.85;
+  font-weight:700;
+}
+
+.barWrap{
+  height:16px;
+  background:#18191d;
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:20px;
+  position:relative;
+}
+
+.bar{
+  height:100%;
+  width:50%;
+  background:linear-gradient(90deg,#7f5cff,#ff5f95);
+  transition:.25s;
+}
+
+.tradeRow{
+  display:flex;
+  justify-content:space-between;
+  gap:30px;
+}
+
+.side{
+  width:100%;
+}
+
+.sideHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.sideHeader h2{
+  font-size:18px;
+}
+
+.sideValue{
+  background:var(--slot);
+  padding:8px 12px;
+  border-radius:10px;
+  font-size:14px;
+}
+
+.gridWrap{
+  background:rgba(0,0,0,.2);
+  border-radius:18px;
+  padding:14px;
+  height:560px;
+  overflow-y:auto;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.slot{
+  background:var(--slot);
+  border:2px solid transparent;
+  border-radius:16px;
+  min-height:120px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  overflow:hidden;
+  transition:.18s;
+}
+
+.slot:hover{
+  border-color:#7f5cff;
+  transform:translateY(-2px);
+}
+
+.slot.empty{
+  font-size:38px;
+  color:#999;
+}
+
+.slot img{
+  width:72px;
+  height:72px;
+  object-fit:contain;
+}
+
+.petName{
+  position:absolute;
+  bottom:8px;
+  left:8px;
+  right:8px;
+  font-size:11px;
+  text-align:center;
+  font-weight:700;
+}
+
+.badges{
+  position:absolute;
+  top:6px;
+  right:6px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.badge{
+  padding:4px 6px;
+  border-radius:8px;
+  font-size:10px;
+  font-weight:700;
+  color:white;
+}
+
+.fly{background:var(--fly);}
+.ride{background:var(--ride);}
+.neon{background:var(--neon);}
+.mega{background:var(--mega);}
+
+.middleSection{
+  min-width:170px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+}
+
+.tradeDiff{
+  font-size:36px;
+  font-weight:800;
+}
+
+.tradeStatus{
+  padding:12px 18px;
+  border-radius:14px;
+  background:var(--slot);
+  text-align:center;
+  width:100%;
+}
+
+.win{color:var(--green);}
+.lose{color:var(--red);}
+.fair{color:#ffd95f;}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+
+.searchBox,
+.filterSelect{
+  background:var(--card);
+  border:none;
+  color:white;
+  padding:12px;
+  border-radius:12px;
+}
+
+.searchBox{
+  flex:1;
+  min-width:240px;
+}
+
+.filterSelect{
+  min-width:180px;
+}
+
+.picker{
+  position:fixed;
+  inset:auto 0 0 0;
+  background:#202228;
+  border-top-left-radius:22px;
+  border-top-right-radius:22px;
+  padding:18px;
+  transform:translateY(100%);
+  transition:.25s;
+  z-index:500;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+.picker.active{
+  transform:translateY(0);
+}
+
+.pickerTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+}
+
+.closePicker{
+  border:none;
+  background:var(--slot);
+  color:white;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.mods{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.mods button{
+  border:none;
+  color:white;
+  padding:10px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.mods button.active{
+  outline:3px solid rgba(255,255,255,.2);
+}
+
+.flyBtn{background:var(--fly);}
+.rideBtn{background:var(--ride);}
+.neonBtn{background:var(--neon);}
+.megaBtn{background:var(--mega);}
+.noneBtn{background:#666;}
+
+.petGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;
+  max-height:420px;
+  overflow-y:auto;
+  margin-top:18px;
+}
+
+.pet{
+  background:var(--slot);
+  border-radius:16px;
+  padding:10px;
+  cursor:pointer;
+  transition:.18s;
+  text-align:center;
+}
+
+.pet:hover{
+  transform:translateY(-2px);
+}
+
+.pet img{
+  width:100%;
+  height:75px;
+  object-fit:contain;
+}
+
+.petValue{
+  margin-top:4px;
+  color:#9be6b4;
+  font-size:12px;
+}
+
+.settingsMenu{
+  position:fixed;
+  top:72px;
+  right:18px;
+  width:310px;
+  max-height:80vh;
+  overflow-y:auto;
+  background:#202228;
+  border-radius:20px;
+  padding:18px;
+  display:none;
+  z-index:1000;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.settingsMenu h3{
+  margin-bottom:10px;
+  margin-top:14px;
+}
+
+.themeGrid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+
+.theme{
+  height:50px;
+  border-radius:12px;
+  cursor:pointer;
+  border:2px solid rgba(255,255,255,.15);
+}
+
+.customColor{
+  width:100%;
+  height:42px;
+  border:none;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.aboutBox{
+  background:var(--slot);
+  padding:12px;
+  border-radius:14px;
+  color:var(--sub);
+  font-size:13px;
+  line-height:1.5;
+}
+
+.adBox{
+  margin-top:18px;
+  background:var(--slot);
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+}
+
+.footer{
+  width:95%;
+  max-width:1100px;
+  margin:30px auto 260px;
+  text-align:center;
+  color:var(--sub);
+  line-height:1.6;
+}
+
+@media(max-width:980px){
+  .tradeRow{
+    flex-direction:column;
+  }
+
+  .middleSection{
+    width:100%;
+    flex-direction:row;
+  }
+
+  .gridWrap{
+    height:auto;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">gizmo.vals</div>
+
+  <div class="topButtons">
+    <button class="topBtn" onclick="resetTrades()">⟳</button>
+    <button class="topBtn" onclick="toggleSettings()">⚙</button>
+  </div>
+</div>
+
+<div class="mainWrap">
+
+  <div class="heroCard">
+
+    <div class="heroTop">
+      <div class="heroLeft">
+        <h1>Adopt Me Value Calculator</h1>
+        <p>Compare trades instantly, organize pets by value, and join active trading servers.</p>
+      </div>
+
+      <a class="serverBtn" href="https://www.roblox.com/share?code=609a95efb1455b4ea74d0555c6f0d713&type=Server" target="_blank">
+        Join Trading Server
+      </a>
+    </div>
+
+    <div class="infoGrid">
+      <div class="infoCard">
+        <h3>Fast Trading</h3>
+        <p>Add pets with Fly, Ride, Neon, and Mega modifiers instantly using the picker menu.</p>
+      </div>
+
+      <div class="infoCard">
+        <h3>Editable About Section</h3>
+        <p>You can edit the website information directly inside Visual Studio Code in the About section below.</p>
+      </div>
+
+      <div class="infoCard">
+        <h3>Organized Filters</h3>
+        <p>Sort pets by highest value, lowest value, alphabetical order, or newest pets added.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tradeBox">
+
+    <div class="tradeTitle">YOUR OFFER VS THEIR OFFER</div>
+
+    <div class="barWrap">
+      <div class="bar" id="bar"></div>
+    </div>
+
+    <div class="tradeRow">
+
+      <div class="side">
+
+        <div class="sideHeader">
+          <h2>Your Offer</h2>
+          <div class="sideValue" id="yourValue">0</div>
+        </div>
+
+        <div class="gridWrap">
+          <div class="grid" id="youGrid"></div>
+        </div>
+
+      </div>
+
+      <div class="middleSection">
+        <div class="tradeDiff" id="middleValue">0</div>
+
+        <div class="tradeStatus" id="tradeStatus">
+          Waiting for pets...
+        </div>
+      </div>
+
+      <div class="side">
+
+        <div class="sideHeader">
+          <h2>Their Offer</h2>
+          <div class="sideValue" id="theirValue">0</div>
+        </div>
+
+        <div class="gridWrap">
+          <div class="grid" id="themGrid"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="controls">
+      <input type="text" class="searchBox" id="searchInput" placeholder="Search pets..." oninput="loadPets()" />
+
+      <select class="filterSelect" id="filterSelect" onchange="loadPets()">
+        <option value="high">Highest Value</option>
+        <option value="low">Lowest Value</option>
+        <option value="az">A-Z</option>
+        <option value="new">Newest Added</option>
+      </select>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="settingsMenu" id="settingsMenu">
+
+  <h2>Settings</h2>
+
+  <h3>Dark Themes</h3>
+
+  <div class="themeGrid">
+    <div class="theme" style="background:#1e1f24" onclick="setTheme('#1e1f24','#2a2c33','#17181c')"></div>
+
+    <div class="theme" style="background:#121826" onclick="setTheme('#121826','#1f2a44','#0e1320')"></div>
+
+    <div class="theme" style="background:#142117" onclick="setTheme('#142117','#233528','#0f1711')"></div>
+
+    <div class="theme" style="background:#24141d" onclick="setTheme('#24141d','#382232','#180f15')"></div>
+  </div>
+
+  <h3>Light Themes</h3>
+
+  <div class="themeGrid">
+    <div class="theme" style="background:#f2f2f2" onclick="setLightTheme('#f2f2f2','#ffffff','#dddddd','#111111')"></div>
+
+    <div class="theme" style="background:#dff4ff" onclick="setLightTheme('#dff4ff','#ffffff','#b8d5e3','#111111')"></div>
+
+    <div class="theme" style="background:#fff1db" onclick="setLightTheme('#fff1db','#fffaf2','#e8d8b8','#111111')"></div>
+
+    <div class="theme" style="background:#ffe8f0" onclick="setLightTheme('#ffe8f0','#fff7fa','#e7c9d3','#111111')"></div>
+  </div>
+
+  <h3>Custom Background</h3>
+
+  <input type="color" class="customColor" onchange="customTheme(this.value)">
+
+  <h3>About Website</h3>
+
+  <div class="aboutBox">
+  Hello
+    <br><br>
+    This Adopt Me Value Calculator is designed to help Roblox players quickly compare the value of their trades. Add pets with different modifiers, see real-time value calculations, and determine if your trade is fair or not. The website also includes sorting options and a pet picker for easy trade building.
+    <br>
+    Welcome to gizmo.vals!
+  </div>
+
+  <div style="margin-top:18px;font-size:13px;color:var(--sub);">
+    Need help? Message @ykviro
+  </div>
+
+  <a class="serverBtn" style="margin-top:12px;" href="https://discord.com/users/ykviro" target="_blank">
+    Message @ykviro
+  </a>
+
+</div>
+
+<div class="picker" id="picker">
+
+  <div class="pickerTop">
+    <h2>Select Pet</h2>
+    <button class="closePicker" onclick="closePicker()">✕</button>
+  </div>
+
+  <div class="mods">
+    <button class="flyBtn" id="flyBtn" onclick="toggleMod('fly')">Fly</button>
+    <button class="rideBtn" id="rideBtn" onclick="toggleMod('ride')">Ride</button>
+    <button class="neonBtn" id="neonBtn" onclick="toggleMod('neon')">Neon</button>
+    <button class="megaBtn" id="megaBtn" onclick="toggleMod('mega')">Mega</button>
+    <button class="noneBtn" onclick="removePet()">Remove</button>
+  </div>
+
+  <div class="petGrid" id="petGrid"></div>
+
+</div>
+
+<div class="footer">
+  This Value Calculator is made for Adopt Me trading.
+  <br>
+  Compare offers, build trades, and calculate fair values instantly.
+</div>
+
+<script>
+
+const pets = [
+  {name:'Bat Dragon',value:723,new:true},
+  {name:'Shadow Dragon',value:560,new:true},
+  {name:'Giraffe',value:322},
+  {name:'Frost Dragon',value:256},
+  {name:'Owl',value:205},
+  {name:'Balloon Unicorn',value:162,new:true},
+  {name:'Parrot',value:162},
+  {name:'Crow',value:141},
+  {name:'Giant Panda',value:106},
+  {name:'Evil Unicorn',value:99},
+  {name:'Cryptid',value:86},
+  {name:'Haetae',value:79,new:true},
+  {name:'Blazing Lion',value:56},
+  {name:'Jekyll Hydra',value:56,new:true},
+  {name:'Orchid Butterfly',value:56},
+  {name:'Diamond Butterfly',value:50},
+  {name:'Arctic Reindeer',value:42},
+  {name:'Mermicorn',value:40,new:true},
+  {name:'Strawberry Shortcake Bat Dragon',value:25.75},
+  {name:'Hot Doggo',value:25.5},
+  {name:'Chocolate Chip Bat Dragon',value:23},
+  {name:'Turtle',value:22.5},
+  {name:'Monkey King',value:21},
+  {name:'Tortoiseshell Guinea Pig',value:20.75,new:true},
+  {name:'Kangaroo',value:17.5},
+  {name:'Undead Jousting Horse',value:17.5},
+  {name:'Albino Monkey',value:15.5},
+  {name:'Candyfloss Chick',value:15.25,new:true},
+  {name:'Sugar Glider',value:12},
+  {name:'Fairy Bat Dragon',value:11},
+  {name:'Grim Dragon',value:11},
+  {name:'Moonbeam Peacock',value:10,new:true},
+  {name:'Winged Tiger',value:9.5},
+  {name:'Bush Elephant',value:9,new:true},
+  {name:'Velocirooster',value:9,new:true},
+  {name:'Shark Puppy',value:8.75},
+  {name:'Frostbite Bear',value:8.25,new:true},
+  {name:'Strawberry Penguin',value:7.75,new:true},
+  {name:'Field Mouse',value:7.5},
+  {name:'Black-Chested Pheasant',value:7.25},
+  {name:'Werewolf',value:7.25},
+  {name:'Papa Moose',value:7,new:true},
+  {name:'Vampire Dragon',value:6.5},
+  {name:'Candicorn',value:6.25,new:true},
+  {name:'Owlbear',value:6.25},
+  {name:'Cupid Dragon',value:6,new:true},
+  {name:'Emperor Gorilla',value:6},
+  {name:'Frost Fury',value:6},
+  {name:'Red Dutch Guinea Pig',value:5.75,new:true},
+  {name:'Pirate Ghost Capuchin Monkey',value:5.5,new:true},
+  {name:'Moose Calf',value:5.25,new:true},
+  {name:'Pineapple Owl',value:5.25,new:true},
+  {name:'Tio De Nadal',value:5.25},
+  {name:'Nessie',value:5},
+  {name:'Silverback Gorilla',value:5},
+  {name:'Dragonfruit Fox',value:4.5,new:true},
+  {name:'Fallow Deer',value:4.5},
+  {name:'Royal Mistletroll',value:4.5,new:true},
+  {name:'Caelum Cervi',value:4.25,new:true},
+  {name:'Lava Dragon',value:4.25},
+  {name:'Mechapup',value:4.25},
+  {name:'Diamond Amazon',value:4},
+  {name:'Sakura Spirit',value:4},
+  {name:'Sugar Axolotl',value:4,new:true},
+  {name:'Halloween White Ghost Dragon',value:3.75},
+  {name:'Glacier Kitsune',value:3.5},
+  {name:'Latte Kitsune',value:3.5,new:true},
+  {name:'Midnight Dragon',value:3.5},
+  {name:'Phantom Dragon',value:3.5},
+  {name:'Aurora Fox',value:3.25,new:true},
+  {name:'Dango Penguins',value:3.25,new:true},
+  {name:'Dancing Dragon',value:3},
+  {name:'Giant Gold Scarab',value:2.75},
+  {name:'Rose Dragon',value:2.75},
+  {name:'Arctic Dusk Dragon',value:2.5,new:true},
+  {name:'Diamond Albatross',value:2.5},
+  {name:'Glormy Leo',value:2.5,new:true},
+  {name:'Peahen',value:2.5},
+  {name:'Diamond Hamster',value:2.25},
+  {name:'Diamond Hummingbird',value:2.25},
+  {name:'Majestic Pony',value:2.25,new:true},
+  {name:'Golden Chow-Chow',value:2},
+  {name:'Golden Penguin',value:2}
+];
+
+pets.forEach(p=>{
+  p.img=`https://placehold.co/100x100/png?text=${encodeURIComponent(p.name)}`;
+});
+
+let you = new Array(18).fill(null);
+let them = new Array(18).fill(null);
+
+let currentSlot = null;
+let currentSide = null;
+
+let mods = {
+  fly:false,
+  ride:false,
+  neon:false,
+  mega:false
+};
+
+function draw(){
+  drawSide('you',document.getElementById('youGrid'));
+  drawSide('them',document.getElementById('themGrid'));
+  updateTotals();
+}
+
+function drawSide(side,element){
+
+  const list = side === 'you' ? you : them;
+
+  element.innerHTML='';
+
+  list.forEach((pet,index)=>{
+
+    const slot = document.createElement('div');
+
+    if(!pet){
+      slot.className='slot empty';
+      slot.innerHTML='+';
+    }
+    else{
+      slot.className='slot';
+
+      let badges = '';
+
+      if(pet.fly) badges += '<div class="badge fly">F</div>';
+      if(pet.ride) badges += '<div class="badge ride">R</div>';
+      if(pet.neon) badges += '<div class="badge neon">N</div>';
+      if(pet.mega) badges += '<div class="badge mega">M</div>';
+
+      slot.innerHTML=`
+        <img src="${pet.img}">
+
+        <div class="badges">
+          ${badges}
+        </div>
+
+        <div class="petName">${pet.name}</div>
+      `;
+    }
+
+    slot.onclick=()=>{
+      currentSlot=index;
+      currentSide=side;
+      openPicker();
+    };
+
+    element.appendChild(slot);
+
+  });
+}
+
+function loadPets(){
+
+  const grid = document.getElementById('petGrid');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+
+  grid.innerHTML='';
+
+  let filtered = [...pets].filter(p=>
+    p.name.toLowerCase().includes(search)
+  );
+
+  if(filter==='high'){
+    filtered.sort((a,b)=>b.value-a.value);
+  }
+
+  if(filter==='low'){
+    filtered.sort((a,b)=>a.value-b.value);
+  }
+
+  if(filter==='az'){
+    filtered.sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
+  if(filter==='new'){
+    filtered.sort((a,b)=>(b.new===true)-(a.new===true));
+  }
+
+  filtered.forEach(pet=>{
+
+    const div = document.createElement('div');
+
+    div.className='pet';
+
+    div.innerHTML=`
+      <img src="${pet.img}">
+      <div>${pet.name}</div>
+      <div class="petValue">${pet.value}</div>
+    `;
+
+    div.onclick=()=>addPet(pet);
+
+    grid.appendChild(div);
+
+  });
+}
+
+function addPet(pet){
+
+  if(currentSlot===null) return;
+
+  const newPet = {
+    ...pet,
+    ...mods
+  };
+
+  if(currentSide==='you'){
+    you[currentSlot]=newPet;
+  }
+  else{
+    them[currentSlot]=newPet;
+  }
+
+  closePicker();
+  draw();
+}
+
+function removePet(){
+
+  if(currentSlot===null) return;
+
+  if(currentSide==='you'){
+    you[currentSlot]=null;
+  }
+  else{
+    them[currentSlot]=null;
+  }
+
+  closePicker();
+  draw();
+}
+
+function calc(list){
+
+  let total = 0;
+
+  list.forEach(p=>{
+
+    if(!p) return;
+
+    let value = p.value;
+
+    if(p.neon) value *= 2;
+    if(p.mega) value *= 4;
+    if(p.fly) value *= 1.1;
+    if(p.ride) value *= 1.1;
+
+    total += value;
+
+  });
+
+  return total;
+}
+
+function updateTotals(){
+
+  const yourTotal = calc(you);
+  const theirTotal = calc(them);
+
+  document.getElementById('yourValue').innerText = yourTotal.toFixed(2);
+  document.getElementById('theirValue').innerText = theirTotal.toFixed(2);
+
+  const diff = yourTotal - theirTotal;
+
+  document.getElementById('middleValue').innerText = diff.toFixed(2);
+
+  const total = yourTotal + theirTotal;
+
+  document.getElementById('bar').style.width =
+    total===0 ? '50%' : `${(yourTotal/total)*100}%`;
+
+  const status = document.getElementById('tradeStatus');
+
+  if(Math.abs(diff)<5){
+    status.innerHTML='<span class="fair">FAIR TRADE</span>';
+  }
+  else if(diff>0){
+    status.innerHTML='<span class="lose">YOU ARE OVER</span>';
+  }
+  else{
+    status.innerHTML='<span class="win">YOU ARE UNDER</span>';
+  }
+}
+
+function toggleMod(type){
+
+  mods[type]=!mods[type];
+
+  const btn = document.getElementById(type+'Btn');
+
+  btn.classList.toggle('active');
+}
+
+function openPicker(){
+  document.getElementById('picker').classList.add('active');
+}
+
+function closePicker(){
+  document.getElementById('picker').classList.remove('active');
+}
+
+function toggleSettings(){
+
+  const menu = document.getElementById('settingsMenu');
+
+  menu.style.display =
+    menu.style.display === 'block'
+    ? 'none'
+    : 'block';
+}
+
+function setTheme(bg,card,bg2){
+
+  document.documentElement.style.setProperty('--bg',bg);
+  document.documentElement.style.setProperty('--card',card);
+  document.documentElement.style.setProperty('--bg2',bg2);
+  document.documentElement.style.setProperty('--text','#ffffff');
+}
+
+function setLightTheme(bg,card,border,text){
+
+  document.documentElement.style.setProperty('--bg',bg);
+  document.documentElement.style.setProperty('--bg2',bg);
+  document.documentElement.style.setProperty('--card',card);
+  document.documentElement.style.setProperty('--slot',border);
+  document.documentElement.style.setProperty('--text',text);
+}
+
+function customTheme(color){
+  document.documentElement.style.setProperty('--bg',color);
+}
+
+function resetTrades(){
+
+  you = new Array(18).fill(null);
+  them = new Array(18).fill(null);
+
+  draw();
+}
+
+window.onclick=(e)=>{
+
+  const menu = document.getElementById('settingsMenu');
+
+  if(
+    !e.target.closest('.settingsMenu') &&
+    !e.target.closest('.topBtn')
+  ){
+    menu.style.display='none';
+  }
+};
+
+loadPets();
+draw();
+
+</script>
+</body>
+</html>
+```

@@ -15,22 +15,32 @@ import type { SourceAdapter } from "./types";
  * Canonical page:        https://adoptmetradingvalues.org/values/
  * Secondary candidate:   https://adoptmetradingvalues.com/pet-value-list.php?params=everything
  *
- * Both sites publish a single value table per page. Values are quoted in RP
- * ("Ride Potions"), which is also our canonical unit, so no conversion is
- * needed. We start with the `.org` page; the `.com` page is registered but
- * disabled behind `ENABLE_AMTV_DOTCOM` because it appears to be a thinner /
- * older mirror and we don't want to over-weight what's effectively the same
- * data source.
+ * The `.org` page is a Next.js app that renders the value list as a grid of
+ * `<div class="group grid ...">` rows. We anchor on each row's
+ * `<a href="/pets/SLUG">Name</a>` link and then read sibling fields from the
+ * surrounding grid:
+ *
+ *   - Name        — `<a href="/pets/SLUG">…</a>` text
+ *   - Image       — `<img alt="Name" src="/Adoptimage/SLUG.png">` (root-relative)
+ *   - Rarity      — `<span … bg-amber-500">legendary</span>` (and friends)
+ *   - Value       — `<span … text-amber-400">650 RP</span>` (appears twice;
+ *                   we read the first occurrence and dedupe)
+ *   - Origin      — `<span … md:hidden">Halloween 2019</span>` (egg / source)
+ *
+ * The page categorises items as Pet / Food / Vehicle / etc via tabs that
+ * trigger client-side filtering, so the default landing page returns
+ * just one category at a time (currently Pet). To pull other categories we
+ * would need to also fetch `/values/?category=…` (left as a TODO).
  *
  * IMPORTANT — Terms of Service:
- *   Verify the site terms before enabling. Daily-cron access only, never
- *   from frontend requests. Image hotlinking is NOT allowed — we pass any
- *   discovered image URL through as `imageUrl` so the image-cache step can
- *   download it into Supabase Storage instead.
+ *   Verify before enabling for production traffic. Daily cron only, never
+ *   from frontend requests. Image hotlinking is NOT permitted — we surface
+ *   discovered image URLs for the image-cache step to download into our
+ *   own Supabase Storage bucket.
  *
  * IMPORTANT — Fixture parity:
- *   Selectors target `__fixtures__/amtv.values.html`. The real DOM may be
- *   different; update both together when you verify against the live page.
+ *   Selectors target `__fixtures__/amtv.values.html`. Refresh the fixture
+ *   and selectors together if the live structure changes.
  */
 
 export const AMTV_PRIMARY_URL = "https://adoptmetradingvalues.org/values/";
@@ -43,71 +53,109 @@ const AMTV_SECONDARY_HOST = "https://adoptmetradingvalues.com";
 const PRIMARY_SOURCE_NAME = "adoptmetradingvalues";
 const SECONDARY_SOURCE_NAME = "adoptmetradingvalues_legacy";
 
-const CATEGORY_MAP: Record<string, ItemCategory> = {
-  pet: "pet",
-  pets: "pet",
-  egg: "egg",
-  eggs: "egg",
-  vehicle: "vehicle",
-  vehicles: "vehicle",
-  toy: "toy",
-  toys: "toy",
-  stroller: "stroller",
-  strollers: "stroller",
-  "pet wear": "pet_wear",
-  petwear: "pet_wear",
-  "pet-wear": "pet_wear",
-  food: "food",
-  gift: "gift",
-  gifts: "gift",
-  potion: "potion",
-  potions: "potion",
+const RARITY_CLASS_MAP: Record<string, string> = {
+  "bg-amber-500": "legendary",
+  "bg-fuchsia-600": "ultra rare",
+  "bg-sky-600": "rare",
+  "bg-emerald-600": "uncommon",
+  "bg-zinc-600": "common",
 };
+
+const VALUE_CLASS_HINTS = ["RP"];
+
+function inferCategoryFromUrl(url: string): ItemCategory {
+  // The values page exposes one category at a time via the `?category=` query
+  // param. Default landing page is "pet".
+  const m = url.match(/[?&]category=([^&]+)/i);
+  const cat = (m?.[1] ?? "pet").toLowerCase();
+  switch (cat) {
+    case "pet":
+      return "pet";
+    case "egg":
+      return "egg";
+    case "food":
+      return "food";
+    case "gift":
+      return "gift";
+    case "petwear":
+    case "wing":
+      return "pet_wear";
+    case "stroller":
+      return "stroller";
+    case "toy":
+    case "sticker":
+      return "toy";
+    case "vehicle":
+      return "vehicle";
+    default:
+      return "other";
+  }
+}
 
 export function parseAmtvHtml(
   html: string,
   sourceName: string,
-  baseHost: string
+  baseHost: string,
+  category: ItemCategory = "pet"
 ): RawSourceValue[] {
   const $ = cheerio.load(html);
   const out: RawSourceValue[] = [];
+  const seenSlugs = new Set<string>();
 
-  // The selector below is intentionally generous: it accepts any <table>
-  // that has an `.item-row` body, OR a table whose header includes a
-  // recognisable "Value" column. Tighten this once we verify the live DOM.
-  let $rows = $("table.value-list tbody tr.item-row");
-  if ($rows.length === 0) {
-    $rows = $("table tbody tr").filter((_, tr) => {
-      return $(tr).find("td").length >= 3;
-    });
-  }
+  // Each pet row carries an <a href="/pets/SLUG">. That's our anchor.
+  $('a[href^="/pets/"]').each((_, a) => {
+    const $a = $(a);
+    const href = $a.attr("href") ?? "";
+    const m = href.match(/\/pets\/([^/?#]+)/);
+    if (!m) return;
+    const slug = m[1];
+    if (seenSlugs.has(slug)) return;
+    seenSlugs.add(slug);
 
-  $rows.each((_, tr) => {
-    const $tr = $(tr);
-    const $cells = $tr.find("td");
-    if ($cells.length < 3) return;
-
-    // Cell layout (per fixture): [thumbnail][name][category][rarity][value]
-    const imgSrc = $cells.eq(0).find("img").attr("src");
-    const name = $cells.eq(1).text().trim();
-    const categoryText = $cells.eq(2).text().trim();
-    const rarity = $cells.eq(3).text().trim() || null;
-    const valueText = $cells.eq($cells.length - 1).text().trim();
-
+    const name = $a.text().trim();
     if (!name) return;
+
+    // Walk up to the row container. Each pet sits inside a
+    // `<div class="group ...">` grid; the outermost row also has class
+    // `group` — find the nearest ancestor that has it.
+    const $row = $a.closest("div.group");
+    if ($row.length === 0) return;
+
+    const $img = $row.find("img").first();
+    const imageUrl = resolveImageUrl($img.attr("src"), baseHost);
+
+    // Rarity: first <span> inside the row whose class includes one of the
+    // known bg-… colour tokens.
+    let rarity: string | null = null;
+    $row.find("span").each((_, span) => {
+      if (rarity) return;
+      const cls = $(span).attr("class") ?? "";
+      for (const [token, label] of Object.entries(RARITY_CLASS_MAP)) {
+        if (cls.includes(token)) {
+          rarity = label;
+          return;
+        }
+      }
+    });
+
+    // Value: first <span> whose text ends with "RP".
+    let valueText: string | null = null;
+    $row.find("span").each((_, span) => {
+      if (valueText) return;
+      const t = $(span).text().trim();
+      if (VALUE_CLASS_HINTS.some((h) => t.endsWith(h))) {
+        valueText = t.replace(/\s*RP\s*$/i, "");
+      }
+    });
 
     const raw = normalizeSourceValue({
       sourceName,
       sourceItemName: name,
       rawValue: valueText,
-      category: mapCategory(categoryText),
-      // AMTV publishes "regular" values per item — they don't enumerate the
-      // 12-variant matrix. The variant parser inside `normalizeSourceValues`
-      // (called by the sync pipeline) will still lift any "FR " prefix off
-      // the name when present.
-      variant: "regular",
+      category,
+      variant: "regular", // AMTV publishes one headline value per pet
       rarity,
-      imageUrl: resolveImageUrl(imgSrc, baseHost),
+      imageUrl,
     });
     if (raw) out.push(raw);
   });
@@ -115,17 +163,11 @@ export function parseAmtvHtml(
   return out;
 }
 
-function mapCategory(input: string): ItemCategory {
-  if (!input) return "pet";
-  return CATEGORY_MAP[input.trim().toLowerCase()] ?? "other";
-}
-
 export type AmtvAdapterOptions = {
   enabled?: boolean;
   /**
-   * If true, also pull from the legacy `.com` page. Off by default to avoid
-   * double-counting effectively the same data. Toggle via env in the
-   * registry (see `src/server/sources/index.ts`).
+   * If true, also pull from the legacy `.com` mirror. Off by default to
+   * avoid double-counting the same data.
    */
   enableLegacyMirror?: boolean;
 };
@@ -138,7 +180,12 @@ export function buildAmtvAdapter(options: AmtvAdapterOptions = {}): SourceAdapte
       enabled: options.enabled,
       fetchValues: async () => {
         const html = await fetchText(AMTV_PRIMARY_URL);
-        return parseAmtvHtml(html, PRIMARY_SOURCE_NAME, AMTV_PRIMARY_HOST);
+        return parseAmtvHtml(
+          html,
+          PRIMARY_SOURCE_NAME,
+          AMTV_PRIMARY_HOST,
+          inferCategoryFromUrl(AMTV_PRIMARY_URL)
+        );
       },
     }),
   ];
@@ -152,7 +199,12 @@ export function buildAmtvAdapter(options: AmtvAdapterOptions = {}): SourceAdapte
         enabled: true,
         fetchValues: async () => {
           const html = await fetchText(AMTV_SECONDARY_URL);
-          return parseAmtvHtml(html, SECONDARY_SOURCE_NAME, AMTV_SECONDARY_HOST);
+          return parseAmtvHtml(
+            html,
+            SECONDARY_SOURCE_NAME,
+            AMTV_SECONDARY_HOST,
+            "pet"
+          );
         },
       })
     );
@@ -162,12 +214,11 @@ export function buildAmtvAdapter(options: AmtvAdapterOptions = {}): SourceAdapte
 }
 
 // ─── TODOs ────────────────────────────────────────────────────────────────
-// TODO(amtv-variants): If the live page splits regular/neon/mega across
-//   columns or separate tables, generalise `parseAmtvHtml` to a multi-column
-//   parser (see the AMVerse adapter for an example).
-// TODO(amtv-images): Verify image-use terms before enabling image caching
-//   for this source. The current code surfaces an `imageUrl` so the cache
-//   step can pick it up, but until terms are confirmed, leave the cache
-//   step a no-op for this source.
-// TODO(amtv-legacy): Decide whether to keep the `.com` mirror long-term, or
-//   drop it once `.org` proves reliable on its own.
+// TODO(amtv-categories): The default page only renders the Pet category.
+//   To get the full catalog (food, gift, petwear, etc.) we need to fetch
+//   the same URL with `?category=<name>` and merge results.
+// TODO(amtv-variants): AMTV's "About Pet Values" note states neon ≈ 4×
+//   regular and mega neon ≈ 16× regular. We could synthesise neon /
+//   mega_neon rows from the regular value, but the multipliers are very
+//   rough — better to leave it to AMVerse which publishes them explicitly.
+// TODO(amtv-tos & images): Verify image-use terms before enabling caching.

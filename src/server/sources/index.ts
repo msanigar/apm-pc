@@ -17,7 +17,8 @@ import type { SourceAdapter } from "./types";
  *       ENABLE_AMVERSE                  → AMVerse (two logical sources)
  *       ENABLE_ADOPT_ME_TRADING_VALUES  → adoptmetradingvalues.org
  *       ENABLE_AMTV_LEGACY_MIRROR       → also pull adoptmetradingvalues.com
- *       ENABLE_GITHUB_DATASET           → ironbabatekkral/adoptme-values
+ *       ENABLE_GITHUB_DATASET           → shabbl3/gizmo.values
+ *       ENABLE_GITHUB_IRONBABA          → ironbabatekkral/adoptme-values
  *       ENABLE_GITHUB_HIGH_TIER         → Roblox-Services/High-Tier-Adopt-Me-Values
  *
  * Defaults:
@@ -52,6 +53,7 @@ function buildAllAdapters(env: Record<string, string | undefined>): SourceAdapte
     adapters.push(
       ...buildGithubAdapters({
         enabled: true,
+        enableIronbaba: isEnabled(env.ENABLE_GITHUB_IRONBABA),
         enableHighTier: isEnabled(env.ENABLE_GITHUB_HIGH_TIER),
       })
     );

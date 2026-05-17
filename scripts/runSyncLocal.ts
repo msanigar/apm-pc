@@ -5,11 +5,11 @@
  *   npm run sync:local
  *
  * Behaviour:
- *   - Reads env from .env / process.env (use `direnv` or `dotenv-cli` if you
- *     want a .env loaded automatically).
+ *   - Loads `.env` automatically (when present).
  *   - If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, writes to Supabase.
  *   - Otherwise runs in dry-run mode and just prints what it would have done.
  */
+import "dotenv/config";
 import { syncValues } from "../src/server/syncValues";
 
 async function main() {

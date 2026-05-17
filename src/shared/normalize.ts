@@ -42,12 +42,25 @@ export type AliasMap = Map<string, string>;
 export function buildAliasMap(
   items: ReadonlyArray<{ slug: string; name: string; aliases?: string[] }>
 ): AliasMap {
-  const map: AliasMap = new Map();
+  // First pass: register every canonical name + slug as itself. This pass
+  // must run before aliases so that an alias can never "promote" a string
+  // that is also a real item name to a different slug. e.g. "Bat" is its
+  // own item; the alias "bat" → "bat-dragon" must NOT override it.
+  const canonical: AliasMap = new Map();
   for (const item of items) {
-    map.set(item.name.toLowerCase(), item.slug);
-    map.set(item.slug.replace(/-/g, " "), item.slug);
+    canonical.set(item.name.toLowerCase(), item.slug);
+    canonical.set(item.slug.replace(/-/g, " "), item.slug);
+  }
+
+  // Second pass: layer on user-facing aliases, but only when the alias
+  // string is not already claimed by a different canonical item.
+  const map: AliasMap = new Map(canonical);
+  for (const item of items) {
     for (const alias of item.aliases ?? []) {
-      map.set(alias.toLowerCase(), item.slug);
+      const key = alias.toLowerCase();
+      const claimed = canonical.get(key);
+      if (claimed && claimed !== item.slug) continue;
+      map.set(key, item.slug);
     }
   }
   return map;

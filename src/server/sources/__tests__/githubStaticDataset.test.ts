@@ -3,42 +3,95 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  parseGizmoHtml,
   parseHighTierPayload,
   parseIronbabaPayload,
 } from "../githubStaticDataset";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-function loadJson<T>(file: string): T {
-  return JSON.parse(
-    readFileSync(path.join(HERE, "..", "__fixtures__", file), "utf8")
-  ) as T;
+function loadFile(file: string): string {
+  return readFileSync(path.join(HERE, "..", "__fixtures__", file), "utf8");
 }
 
+function loadJson<T>(file: string): T {
+  return JSON.parse(loadFile(file)) as T;
+}
+
+describe("parseGizmoHtml", () => {
+  const rows = parseGizmoHtml(loadFile("gizmo.values.html"));
+
+  it("extracts a pet list from the embedded JS array", () => {
+    expect(rows.length).toBeGreaterThan(50); // current snapshot has ~82
+  });
+
+  it("includes well-known high-tier pets", () => {
+    const names = new Set(rows.map((r) => r.sourceItemName));
+    expect(names.has("Bat Dragon")).toBe(true);
+    expect(names.has("Shadow Dragon")).toBe(true);
+    expect(names.has("Frost Dragon")).toBe(true);
+  });
+
+  it("parses values as positive RP numbers", () => {
+    const bat = rows.find((r) => r.sourceItemName === "Bat Dragon");
+    expect(bat?.valueRp).toBeGreaterThan(100);
+    for (const r of rows) {
+      expect(r.valueRp).toBeGreaterThan(0);
+    }
+  });
+
+  it("emits only 'regular' variants — never extrapolates", () => {
+    for (const r of rows) expect(r.variant).toBe("regular");
+  });
+
+  it("tags every row with the github_gizmo source and low confidence", () => {
+    for (const r of rows) {
+      expect(r.sourceName).toBe("github_gizmo");
+      expect(r.confidence).toBe("low");
+    }
+  });
+
+  it("returns an empty list when the array is missing", () => {
+    expect(parseGizmoHtml("<html><body>no pets here</body></html>")).toEqual([]);
+  });
+});
+
 describe("parseIronbabaPayload", () => {
-  const rows = parseIronbabaPayload(loadJson("github.adoptme_values.json"));
+  // The ironbabatekkral repo is currently empty, but the parser stays in
+  // place as a defensive fallback. We test it with a synthetic payload that
+  // matches the documented shape.
+  const synthetic = {
+    items: [
+      {
+        name: "Shadow Dragon",
+        category: "pet",
+        rarity: "legendary",
+        values: { regular: 130, neon: 540, mega: 2100, nfr: 1750 },
+      },
+      {
+        name: "Cow",
+        category: "pet",
+        rarity: "ultra rare",
+        values: { regular: "12", neon_fly_ride: "42" },
+      },
+      {
+        name: "Unknown Empty",
+        category: "pet",
+        values: { regular: "—", neon: null },
+      },
+    ],
+  };
+
+  const rows = parseIronbabaPayload(synthetic);
 
   it("emits one row per (item, variant) with a parseable value", () => {
     const shadow = rows.filter((r) => r.sourceItemName === "Shadow Dragon");
     expect(shadow.map((r) => r.variant).sort()).toEqual([
-      "fly",
-      "fly_ride",
       "mega",
-      "mega_fly_ride",
       "neon",
-      "neon_fly",
       "neon_fly_ride",
-      "neon_ride",
       "regular",
-      "ride",
     ]);
-  });
-
-  it("maps schema-internal variant keys to canonical Variant", () => {
-    const ride = rows.find(
-      (r) => r.sourceItemName === "Ride Potion" && r.variant === "regular"
-    );
-    expect(ride?.valueRp).toBe(88);
   });
 
   it("tags rows with the github source name and low confidence", () => {
@@ -62,7 +115,7 @@ describe("parseIronbabaPayload", () => {
   it("survives an object-map payload (no `items` array)", () => {
     const objMap = {
       "Shadow Dragon": {
-        category: "pet",
+        category: "pet" as const,
         rarity: "legendary",
         values: { normal: 130 },
       },
@@ -72,6 +125,12 @@ describe("parseIronbabaPayload", () => {
     expect(out[0]).toEqual(
       expect.objectContaining({ sourceItemName: "Shadow Dragon", valueRp: 130 })
     );
+  });
+
+  it("returns an empty list when the payload is empty or shaped wrong", () => {
+    expect(parseIronbabaPayload({})).toEqual([]);
+    expect(parseIronbabaPayload({ items: [] })).toEqual([]);
+    expect(parseIronbabaPayload(null)).toEqual([]);
   });
 });
 

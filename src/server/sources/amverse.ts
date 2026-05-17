@@ -1,8 +1,7 @@
-import * as cheerio from "cheerio";
 import type { RawSourceValue } from "../../shared/normalize";
 import type { ItemCategory, Variant } from "../../shared/types";
 import {
-  fetchText,
+  fetchJson,
   normalizeSourceValue,
   resolveImageUrl,
   safeAdapter,
@@ -10,203 +9,222 @@ import {
 import type { SourceAdapter } from "./types";
 
 /**
- * AMVerse adapter — https://amverse.co/values
+ * AMVerse adapter — public JSON API.
  *
- * The values page on amverse.co displays a side-by-side view of pet/item
- * values from two community sources: Elvebredd and AMVGG. We treat each
- * column as its own logical source internally:
+ *   GET https://amverse.co/api/pets?offset=N&limit=M
  *
- *   - source_name = "amverse_elvebredd"
- *   - source_name = "amverse_amvgg"
+ * The site bundles a `data.js` script that paginates this endpoint to render
+ * the values table. Inspecting the bundle revealed that the API is open to
+ * any caller that sets the same Origin/Referer headers the browser does. We
+ * follow the same protocol and walk the pages with a hard cap on request
+ * count.
  *
- * That way, when median aggregation kicks in across all sources, AMVerse
- * contributes two independent data points rather than one fused one.
+ * Each item carries two value sub-objects: `elve` (Elvebredd) and `amvgg`
+ * (AMVGG). We only emit Elvebredd values because:
+ *
+ *   • AMVGG values are quoted in a different unit; e.g. Bat Dragon comes
+ *     back as { elve.rvalue: 755, amvgg.regularValue: 3.85 } — the ratio
+ *     between the two is non-constant across items (~25× for low-tier,
+ *     ~200× for high-tier). Naively averaging them with Elvebredd /
+ *     adoptmetradingvalues (both in RP) would corrupt aggregation.
+ *   • AMVGG still gives us useful demand labels (`regularDemand: "High"`
+ *     etc.) and a cross-check on rarity/category. We extract image URLs
+ *     and rarity from the merged record.
+ *
+ * Elvebredd's data is complete — every variant is published as a separate
+ * field. See `ELVE_FIELD_TO_VARIANT` below for the field → variant map.
  *
  * IMPORTANT — Terms of Service:
- * Before enabling this adapter in production, check amverse.co's terms and
- * robots.txt. We currently only ever call this from the daily scheduled
- * sync (never from frontend requests). Image caching is not yet wired up
- * for this source — see TODO at the bottom of the file.
+ *   Always verify amverse.co's terms / robots.txt before enabling at
+ *   scale. We are limited to one cron pass per day with a small page
+ *   count, well below any reasonable rate limit.
  *
  * IMPORTANT — Fixture parity:
- * The selectors below target the structure described in
- * `__fixtures__/amverse.values.html`. The real page may differ. When you
- * verify against the live page, update the fixture AND the selectors
- * together so the tests keep doing real work.
+ *   The trimmed fixture `__fixtures__/amverse.api.json` mirrors the live
+ *   API response shape with ~18 representative items. The full snapshot
+ *   `amverse.api.full.json` (gitignored) is used for catalog seeding.
  */
 
-export const AMVERSE_URL = "https://amverse.co/values";
-const AMVERSE_BASE = "https://amverse.co";
+export const AMVERSE_API_URL = "https://amverse.co/api/pets";
 
-const ELVEBREDD = "amverse_elvebredd";
-const AMVGG = "amverse_amvgg";
+const ELVEBREDD_SOURCE = "amverse_elvebredd";
 
-const VARIANT_HEADER_MAP: Record<string, Variant | undefined> = {
-  regular: "regular",
-  normal: "regular",
-  ride: "ride",
-  fly: "fly",
-  "fly ride": "fly_ride",
-  fr: "fly_ride",
-  neon: "neon",
-  "neon ride": "neon_ride",
-  "neon fly": "neon_fly",
-  "neon fly ride": "neon_fly_ride",
-  nfr: "neon_fly_ride",
-  mega: "mega",
-  "mega ride": "mega_ride",
-  "mega fly": "mega_fly",
-  "mega fly ride": "mega_fly_ride",
-  mfr: "mega_fly_ride",
+/**
+ * Elvebredd publishes a separate field per variant. We map the field name to
+ * our internal `Variant` enum. Anything not in this map is ignored.
+ */
+const ELVE_FIELD_TO_VARIANT: Record<string, Variant> = {
+  rvalue: "regular",
+  rvalueRide: "ride",
+  rvalueFly: "fly",
+  rvalueFlyRide: "fly_ride",
+  nvalue: "neon",
+  nvalueRide: "neon_ride",
+  nvalueFly: "neon_fly",
+  nvalueFlyRide: "neon_fly_ride",
+  mvalue: "mega",
+  mvalueRide: "mega_ride",
+  mvalueFly: "mega_fly",
+  mvalueFlyRide: "mega_fly_ride",
 };
 
-const SOURCE_ROW_CLASS_MAP: Record<string, string> = {
-  "src-elvebredd": ELVEBREDD,
-  "src-amvgg": AMVGG,
+/**
+ * Per-request page size. The endpoint caps at 200, but allows smaller values
+ * if we want to spread the load.
+ */
+const DEFAULT_PAGE_SIZE = 200;
+/** Safety net: never make more than this many requests per sync. */
+const MAX_PAGES = 25;
+
+type ElveBlock = Record<string, number | null | undefined> & {
+  hasChanged?: boolean;
+  scrapedAt?: string;
 };
 
-const CATEGORY_MAP: Record<string, ItemCategory> = {
-  pet: "pet",
-  pets: "pet",
-  egg: "egg",
-  eggs: "egg",
-  vehicle: "vehicle",
-  vehicles: "vehicle",
-  toy: "toy",
-  toys: "toy",
-  stroller: "stroller",
-  strollers: "stroller",
-  "pet wear": "pet_wear",
-  "pet-wear": "pet_wear",
-  petwear: "pet_wear",
-  food: "food",
-  gift: "gift",
-  gifts: "gift",
-  potion: "potion",
-  potions: "potion",
+type AmverseItem = {
+  petId: number;
+  name: string;
+  rarity?: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
+  flyRide?: boolean;
+  elve?: ElveBlock | null;
+  amvgg?: Record<string, unknown> | null;
 };
 
-export function parseAmverseHtml(html: string): RawSourceValue[] {
-  const $ = cheerio.load(html);
+type AmversePage = {
+  pets: AmverseItem[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore?: boolean;
+};
+
+/**
+ * AMVerse's `category` field is a stylistic/personality tag ("High tier",
+ * "Default legs", "Exotic", "2019", "Randoms", "Other"), not an item type.
+ * We ignore it for our internal `ItemCategory` and infer category from the
+ * item name instead — same heuristic as the GitHub adapter.
+ */
+function inferCategory(name: string): ItemCategory {
+  const n = name.toLowerCase();
+  if (/\bpotion\b/.test(n)) return "potion";
+  if (/\begg\b/.test(n)) return "egg";
+  if (/\bstroller\b/.test(n)) return "stroller";
+  if (/\b(toy|plushie|sticker|chew toy|rattle|box)\b/.test(n)) return "toy";
+  if (/\bgift\b/.test(n)) return "gift";
+  if (
+    /\b(hat|headset|glasses|crown|necklace|bag|hood|sword|propeller|wings?|halo|hoverboard|drape|scarf|cape|shoes|lanyard|pin|backpack)\b/.test(
+      n
+    )
+  )
+    return "pet_wear";
+  if (/\b(scooter|airboat|board|car|truck|bike|snowboard)\b/.test(n))
+    return "vehicle";
+  return "pet";
+}
+
+/**
+ * Parse a single page payload into RawSourceValue rows.
+ *
+ * We only emit Elvebredd rows; AMVGG is ignored for value purposes but its
+ * presence is used to enrich the rarity / image URL when Elvebredd doesn't
+ * carry one. See the file header for why we do this.
+ */
+export function parseAmversePage(page: AmversePage | AmverseItem[]): RawSourceValue[] {
+  const items = Array.isArray(page) ? page : page.pets ?? [];
   const out: RawSourceValue[] = [];
 
-  $(".item-card").each((_, el) => {
-    const $card = $(el);
-    const itemName =
-      $card.attr("data-name")?.trim() ||
-      $card.find("h2,h3").first().text().trim();
-    if (!itemName) return;
+  for (const item of items) {
+    if (!item?.name || !item.elve) continue;
 
-    const category = mapCategory($card.attr("data-category"));
-    const rarity = $card.attr("data-rarity")?.trim() ?? null;
-    const imageUrl = resolveImageUrl(
-      $card.find("img").attr("src"),
-      AMVERSE_BASE
-    );
+    const category = inferCategory(item.name);
+    const rarity = item.rarity?.toString().trim().toLowerCase() ?? null;
+    const imageUrl = resolveImageUrl(item.imageUrl, "https://data.amverse.co");
+    const elve = item.elve;
 
-    const $table = $card.find("table.values-table");
-    if ($table.length === 0) return;
+    for (const [field, variant] of Object.entries(ELVE_FIELD_TO_VARIANT)) {
+      const rawValue = elve[field];
+      if (rawValue == null) continue;
 
-    // Map header column index → Variant.
-    const headerVariants: Array<Variant | null> = [];
-    $table
-      .find("thead th")
-      .each((idx, th) => {
-        if (idx === 0) {
-          headerVariants.push(null); // "Source" column
-          return;
-        }
-        const label = $(th).text().trim().toLowerCase();
-        headerVariants.push(VARIANT_HEADER_MAP[label] ?? null);
+      const row = normalizeSourceValue({
+        sourceName: ELVEBREDD_SOURCE,
+        sourceItemName: item.name,
+        rawValue,
+        category,
+        variant,
+        rarity,
+        imageUrl,
       });
-
-    $table.find("tbody tr").each((_, tr) => {
-      const $tr = $(tr);
-      const sourceName = resolveSourceNameFromRow($tr);
-      if (!sourceName) return;
-      $tr.find("td").each((cellIdx, td) => {
-        if (cellIdx === 0) return; // source label column
-        const variant = headerVariants[cellIdx];
-        if (!variant) return;
-        const raw = normalizeSourceValue({
-          sourceName,
-          sourceItemName: itemName,
-          rawValue: $(td).text(),
-          category,
-          variant,
-          rarity,
-          imageUrl,
-        });
-        if (raw) out.push(raw);
-      });
-    });
-  });
+      if (row) out.push(row);
+    }
+  }
 
   return out;
 }
 
-function resolveSourceNameFromRow($tr: cheerio.Cheerio<any>): string | null {
-  for (const [cls, name] of Object.entries(SOURCE_ROW_CLASS_MAP)) {
-    if ($tr.hasClass(cls)) return name;
+export type AmverseAdapterOptions = {
+  enabled?: boolean;
+  /** Override the API URL — useful in tests. */
+  apiUrl?: string;
+  /** Page size for pagination requests. */
+  pageSize?: number;
+  /** Cap on total pages fetched per sync. */
+  maxPages?: number;
+};
+
+async function fetchAllPages(
+  apiUrl: string,
+  pageSize: number,
+  maxPages: number
+): Promise<AmverseItem[]> {
+  const all: AmverseItem[] = [];
+  let offset = 0;
+  for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
+    const url = `${apiUrl}?offset=${offset}&limit=${pageSize}`;
+    const page = await fetchJson<AmversePage>(url, {
+      headers: {
+        Origin: "https://amverse.co",
+        Referer: "https://amverse.co/values",
+      },
+    });
+    if (!page?.pets || page.pets.length === 0) break;
+    all.push(...page.pets);
+    offset += page.pets.length;
+    if (!page.hasMore) break;
   }
-  // Fallback: derive from the first cell text.
-  const label = $tr.find("td").first().text().trim().toLowerCase();
-  if (label.includes("elvebredd")) return ELVEBREDD;
-  if (label.includes("amvgg")) return AMVGG;
-  return null;
+  return all;
 }
 
-function mapCategory(input: string | undefined): ItemCategory {
-  if (!input) return "pet";
-  return CATEGORY_MAP[input.trim().toLowerCase()] ?? "other";
-}
+export function buildAmverseAdapters(
+  options: AmverseAdapterOptions = {}
+): SourceAdapter[] {
+  const apiUrl = options.apiUrl ?? AMVERSE_API_URL;
+  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+  const maxPages = options.maxPages ?? MAX_PAGES;
 
-/**
- * Build the adapter. We deliberately return TWO entries — one per
- * underlying source — so each gets its own row in `source_values` and its
- * own vote in the median aggregator.
- *
- * Both share the same `fetchValues` work: the helper hits the URL once and
- * each adapter filters down to its rows.
- */
-export function buildAmverseAdapters(options: { enabled?: boolean } = {}): SourceAdapter[] {
-  let cachedFetch: Promise<RawSourceValue[]> | null = null;
-  const fetchOnce = () => {
-    if (!cachedFetch) {
-      cachedFetch = fetchText(AMVERSE_URL).then(parseAmverseHtml);
-    }
-    return cachedFetch;
-  };
-
-  const elvebredd = safeAdapter({
-    name: ELVEBREDD,
-    description: "AMVerse — Elvebredd column (scraped from amverse.co/values)",
-    enabled: options.enabled,
-    fetchValues: async () => {
-      const all = await fetchOnce();
-      return all.filter((v) => v.sourceName === ELVEBREDD);
-    },
-  });
-
-  const amvgg = safeAdapter({
-    name: AMVGG,
-    description: "AMVerse — AMVGG column (scraped from amverse.co/values)",
-    enabled: options.enabled,
-    fetchValues: async () => {
-      const all = await fetchOnce();
-      return all.filter((v) => v.sourceName === AMVGG);
-    },
-  });
-
-  return [elvebredd, amvgg];
+  return [
+    safeAdapter({
+      name: ELVEBREDD_SOURCE,
+      description:
+        "AMVerse — Elvebredd values via amverse.co/api/pets (paginated)",
+      enabled: options.enabled,
+      fetchValues: async () => {
+        const items = await fetchAllPages(apiUrl, pageSize, maxPages);
+        return parseAmversePage(items);
+      },
+    }),
+  ];
 }
 
 // ─── TODOs ────────────────────────────────────────────────────────────────
-// TODO(amverse-images): If the values table doesn't carry item images, walk
-//   to each item's detail page (amverse.co/values/<slug>) once per item to
-//   extract a thumbnail. Be careful: this multiplies our request count by N
-//   on every sync. Consider running it only when item_images.checksum is
-//   missing for that slug.
-// TODO(amverse-variants): Expand `VARIANT_HEADER_MAP` if the live page adds
-//   columns we don't recognise (e.g. separate "Ride" / "Fly" columns).
-// TODO(amverse-tos): Re-verify terms of service before enabling in prod.
+// TODO(amverse-amvgg): AMVGG's value scale is per-pet relative, not RP.
+//   We currently drop it. Investigate whether AMVerse exposes a global
+//   AMVGG→RP scale factor, or compute one ourselves by regressing AMVGG
+//   against Elvebredd on legendaries with high demand.
+// TODO(amverse-demand): The amvgg.* fields carry `regularDemand` etc.
+//   ("High"/"Mid"/"Low"). Surface this on the canonical item as a
+//   secondary signal (right now we throw it away).
+// TODO(amverse-rate-limit): Add a delay between paginated requests if we
+//   ever raise MAX_PAGES significantly. Current cap (25 × 200 = 5000 items)
+//   sits well under one daily cron run and the live total of ~3,400.
