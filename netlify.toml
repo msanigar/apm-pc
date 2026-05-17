@@ -1,0 +1,51 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 5173
+  framework = "vite"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = []
+
+# Scheduled daily value sync.
+# Runs every day at 06:15 UTC; adjust to suit your time zone.
+[functions."sync-values"]
+  schedule = "15 6 * * *"
+
+# Friendly URL rewrites for the API namespace.
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/api/search-index"
+  to = "/.netlify/functions/search-index"
+  status = 200
+
+[[redirects]]
+  from = "/api/items/:slug"
+  to = "/.netlify/functions/items?slug=:slug"
+  status = 200
+
+[[redirects]]
+  from = "/api/import-runs/latest"
+  to = "/.netlify/functions/import-runs-latest"
+  status = 200
+
+# SPA fallback for client-side routing.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, s-maxage=86400, stale-while-revalidate=86400"
