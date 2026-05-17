@@ -19,8 +19,13 @@ export function App() {
 
 function NotFound() {
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-6 text-center text-sm text-slate-400">
-      That page doesn’t exist.
+    <div className="rounded-3xl border-2 border-dashed border-brand-200 bg-white/70 p-8 text-center shadow-sm">
+      <p className="text-base font-bold text-slate-700">
+        That page doesn’t exist.
+      </p>
+      <p className="mt-1 text-sm text-slate-500">
+        Try heading back to the search.
+      </p>
     </div>
   );
 }

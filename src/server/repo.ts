@@ -426,6 +426,7 @@ function buildSearchIndexItem(
     category: itemRow.category as ItemCategory,
     rarity: (itemRow.rarity as string | null) ?? null,
     aliases: (itemRow.aliases as string[] | null) ?? [],
+    isHighTier: Boolean(itemRow.is_high_tier),
     imageUrl: itemRow.image_path
       ? `/${itemRow.image_path}`.replace(/^\/+/, "/")
       : null,
@@ -466,6 +467,7 @@ export function buildMockSearchIndex(): SearchIndexItem[] {
       category: item.category,
       rarity: item.rarity ?? null,
       aliases: item.aliases ?? [],
+      isHighTier: item.isHighTier ?? false,
       imageUrl: null,
       values,
     };

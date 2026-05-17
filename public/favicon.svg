@@ -1,6 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#6d28d9" />
-  <path d="M32 14c8 0 14 6 14 14 0 7-5 12-10 14-1 .4-1.5 1.2-1.5 2.4V46a2.5 2.5 0 1 1-5 0v-1.6c0-1.2-.5-2-1.5-2.4-5-2-10-7-10-14 0-8 6-14 14-14Z" fill="#fde68a"/>
-  <circle cx="26" cy="28" r="2.5" fill="#1f2937"/>
-  <circle cx="38" cy="28" r="2.5" fill="#1f2937"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#88bbff" />
+      <stop offset="100%" stop-color="#ff97c1" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)" />
+  <!-- Paw print: main pad + four toe beans -->
+  <g fill="#ffffff">
+    <ellipse cx="32" cy="40" rx="11" ry="9" />
+    <circle cx="19" cy="26" r="5" />
+    <circle cx="27" cy="19" r="5" />
+    <circle cx="37" cy="19" r="5" />
+    <circle cx="45" cy="26" r="5" />
+  </g>
 </svg>

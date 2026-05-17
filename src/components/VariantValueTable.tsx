@@ -1,11 +1,11 @@
-import type { AggregatedVariantValue, ItemCategory } from "@shared/types";
-import { VARIANT_LABELS, variantsForCategory } from "@shared/variants";
+import type { AggregatedVariantValue, ItemCategory, Variant } from "@shared/types";
+import { VARIANT_LABELS, VARIANT_SHORT_LABELS, variantsForCategory } from "@shared/variants";
 import {
-  confidenceColorClass,
   confidenceLabel,
   formatRp,
   valueStatusLabel,
 } from "@/lib/format";
+import { getVariantTheme } from "@/lib/theme";
 
 type Props = {
   category: ItemCategory;
@@ -13,55 +13,97 @@ type Props = {
 };
 
 export function VariantValueTable({ category, values }: Props) {
-  const valueByVariant = new Map<string, AggregatedVariantValue>();
+  const valueByVariant = new Map<Variant, AggregatedVariantValue>();
   for (const v of values) valueByVariant.set(v.variant, v);
 
   const orderedVariants = variantsForCategory(category);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-slate-950/40 text-xs uppercase tracking-wide text-slate-400">
-          <tr>
-            <th className="px-4 py-3 font-medium">Variant</th>
-            <th className="px-4 py-3 text-right font-medium">Value</th>
-            <th className="px-4 py-3 text-right font-medium">Sources</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {orderedVariants.map((variant) => {
-            const v = valueByVariant.get(variant);
-            return (
-              <tr key={variant} className="hover:bg-slate-900/60">
-                <td className="px-4 py-3 text-slate-200">
-                  {VARIANT_LABELS[variant]}
-                </td>
-                <td className="px-4 py-3 text-right text-white tabular-nums">
-                  {v ? formatRp(v.valueRp) : <span className="text-slate-500">—</span>}
-                </td>
-                <td className="px-4 py-3 text-right text-slate-300 tabular-nums">
-                  {v ? `${v.sourceCount}` : "—"}
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  {v ? (
-                    <div className="flex flex-col gap-0.5">
-                      <span className={confidenceColorClass(v.confidence)}>
-                        {confidenceLabel(v.confidence)}
-                      </span>
-                      <span className="text-slate-400">
-                        {valueStatusLabel(v)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-slate-500">No data yet</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {orderedVariants.map((variant) => {
+        const v = valueByVariant.get(variant);
+        return (
+          <VariantTile
+            key={variant}
+            variant={variant}
+            value={v}
+          />
+        );
+      })}
     </div>
+  );
+}
+
+function VariantTile({
+  variant,
+  value,
+}: {
+  variant: Variant;
+  value: AggregatedVariantValue | undefined;
+}) {
+  const tint = getVariantTheme(variant);
+  const isMissing = !value;
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border-2 border-white p-4 shadow-sm transition ${
+        isMissing
+          ? "bg-slate-50/60 text-slate-400"
+          : `${tint.className} ${tint.glowClass ?? ""}`
+      }`}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <span className="rounded-md bg-white/70 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shadow-sm">
+            {VARIANT_SHORT_LABELS[variant]}
+          </span>
+          <span className="text-xs font-bold opacity-80">
+            {VARIANT_LABELS[variant]}
+          </span>
+        </div>
+        {value && (
+          <ConfidenceDot confidence={value.confidence} />
+        )}
+      </div>
+
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="text-2xl font-black tabular-nums">
+          {value ? formatRp(value.valueRp) : "—"}
+        </span>
+        {value && value.minRp !== value.maxRp && (
+          <span className="text-xs font-semibold opacity-70">
+            {formatRp(value.minRp)}–{formatRp(value.maxRp)}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-1 flex items-center justify-between text-[11px] font-semibold opacity-75">
+        <span>
+          {value
+            ? `${value.sourceCount} ${value.sourceCount === 1 ? "source" : "sources"}`
+            : "No data yet"}
+        </span>
+        {value && <span>{valueStatusLabel(value)}</span>}
+      </div>
+
+      {value && (
+        <span className="sr-only">{confidenceLabel(value.confidence)}</span>
+      )}
+    </div>
+  );
+}
+
+function ConfidenceDot({ confidence }: { confidence: "high" | "medium" | "low" }) {
+  const color =
+    confidence === "high"
+      ? "bg-emerald-500"
+      : confidence === "medium"
+        ? "bg-amber-400"
+        : "bg-rose-400";
+  return (
+    <span
+      title={`${confidence} confidence`}
+      className={`inline-block h-2.5 w-2.5 rounded-full ring-2 ring-white ${color}`}
+    />
   );
 }

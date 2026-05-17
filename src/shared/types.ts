@@ -77,6 +77,7 @@ export type SearchIndexItem = {
   category: ItemCategory;
   rarity?: string | null;
   aliases: string[];
+  isHighTier: boolean;
   imageUrl?: string | null;
   values: Partial<Record<Variant, AggregatedVariantValue>>;
 };

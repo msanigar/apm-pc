@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { PawIcon } from "@/components/icons";
 
 type LayoutProps = {
   children: ReactNode;
@@ -8,41 +9,38 @@ type LayoutProps = {
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-white/5 bg-slate-950/70 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm font-semibold tracking-tight text-white"
+            className="group flex items-center gap-2 text-base font-extrabold tracking-tight text-slate-800"
           >
             <span
               aria-hidden
-              className="grid h-7 w-7 place-items-center rounded-lg bg-brand-700 text-base"
+              className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-bubble-400 text-white shadow-md ring-1 ring-white/60 transition group-hover:scale-110 group-hover:rotate-3"
             >
-              {/* Tiny inline glyph keeps us off external icon CDNs. */}
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m11 17.59-3-3a1 1 0 0 1 1.41-1.42L11 14.76l5.59-5.59a1 1 0 1 1 1.41 1.41L11 17.59Z" />
-                <circle cx="12" cy="12" r="10" />
-              </svg>
+              <PawIcon size={18} />
             </span>
-            <span>Adopt Me Value Checker</span>
+            <span className="text-slate-900">
+              Adopt Me
+              <span className="ml-1 bg-gradient-to-r from-brand-600 to-bubble-500 bg-clip-text text-transparent">
+                Values
+              </span>
+            </span>
           </Link>
-          <nav className="text-sm text-slate-300">
-            <Link className="hover:text-white" to="/about">
+          <nav className="flex items-center gap-1 text-sm font-semibold text-slate-600">
+            <Link
+              className="rounded-full px-3 py-1.5 transition hover:bg-brand-100 hover:text-brand-700"
+              to="/about"
+            >
               About
             </Link>
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:py-8">
+        {children}
+      </main>
       <Footer />
     </div>
   );
@@ -50,8 +48,8 @@ export function Layout({ children }: LayoutProps) {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-slate-950/60">
-      <div className="mx-auto max-w-3xl px-4 py-6 text-xs leading-relaxed text-slate-400">
+    <footer className="mt-8 border-t border-white/60 bg-white/60 backdrop-blur">
+      <div className="mx-auto max-w-3xl px-4 py-6 text-xs leading-relaxed text-slate-600">
         <p>
           Fan-made value checker. Not affiliated with Roblox, Uplift Games, or
           Adopt Me. Values are community estimates and may vary by trade.

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { SearchIcon, XIcon } from "@/components/icons";
 
 type Props = {
   value: string;
@@ -10,7 +11,7 @@ type Props = {
 export function SearchBox({
   value,
   onChange,
-  placeholder = "Search a pet or item — try 'FR shadow' or 'nfr owl'",
+  placeholder = "Type a pet or item… try \u201CFR Shadow\u201D or \u201CNFR Owl\u201D",
   autoFocus = true,
 }: Props) {
   const ref = useRef<HTMLInputElement | null>(null);
@@ -22,15 +23,17 @@ export function SearchBox({
   return (
     <label className="block">
       <span className="sr-only">Search pets and items</span>
-      <div className="relative">
+      <div className="group relative">
+        {/* Soft gradient halo that brightens on focus. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-brand-300 via-bubble-300 to-sunny-300 opacity-30 blur-md transition group-focus-within:opacity-70"
+        />
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 grid w-12 place-items-center text-slate-400"
+          className="pointer-events-none absolute inset-y-0 left-0 grid w-14 place-items-center text-brand-400 transition group-focus-within:text-brand-600"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
+          <SearchIcon size={22} />
         </span>
         <input
           ref={ref}
@@ -43,16 +46,19 @@ export function SearchBox({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-2xl border border-white/10 bg-slate-900/60 py-4 pl-12 pr-4 text-lg text-white shadow-lg outline-none ring-0 placeholder:text-slate-500 focus:border-brand-500 focus:bg-slate-900"
+          className="relative w-full rounded-[1.75rem] border-2 border-white bg-white py-4 pl-14 pr-12 text-lg font-semibold text-slate-800 shadow-lg outline-none placeholder:font-medium placeholder:text-slate-400 focus:border-brand-300 focus:shadow-xl"
         />
         {value && (
           <button
             type="button"
-            onClick={() => onChange("")}
+            onClick={() => {
+              onChange("");
+              ref.current?.focus();
+            }}
             aria-label="Clear search"
-            className="absolute inset-y-0 right-2 my-auto h-8 rounded-md px-2 text-sm text-slate-400 hover:text-white"
+            className="absolute inset-y-0 right-3 my-auto grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 transition hover:scale-110 hover:bg-bubble-100 hover:text-bubble-600 active:scale-95"
           >
-            Clear
+            <XIcon size={16} />
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { ImportRunSummary } from "@shared/types";
 import { fetchLatestImportRun } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
+import { ArrowLeftIcon } from "@/components/icons";
 
 export function AboutPage() {
   const [latest, setLatest] = useState<ImportRunSummary | null>(null);
@@ -25,15 +26,22 @@ export function AboutPage() {
     <article className="space-y-6">
       <Link
         to="/"
-        className="inline-flex items-center gap-1 text-sm text-brand-300 hover:underline"
+        className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1.5 text-sm font-bold text-brand-700 shadow-sm ring-1 ring-white/80 transition hover:-translate-x-0.5 hover:bg-white"
       >
-        ← Back to search
+        <ArrowLeftIcon size={14} />
+        Back to search
       </Link>
+
       <header>
-        <h1 className="text-2xl font-semibold text-white">About this tool</h1>
+        <h1 className="text-3xl font-black text-slate-900">
+          About this{" "}
+          <span className="bg-gradient-to-r from-brand-500 to-bubble-500 bg-clip-text text-transparent">
+            tool
+          </span>
+        </h1>
       </header>
 
-      <section className="space-y-3 text-sm leading-relaxed text-slate-300">
+      <section className="space-y-3 rounded-3xl border border-white/80 bg-white p-5 text-sm leading-relaxed text-slate-700 shadow-sm">
         <p>
           This is a lightweight, ad-free Adopt Me value checker. It aggregates
           RP values from a handful of community sources once per day, applies a
@@ -54,17 +62,17 @@ export function AboutPage() {
       </section>
 
       <section>
-        <h2 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+        <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
           Latest import
         </h2>
         {supabaseConfigured === false && (
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm font-semibold text-slate-600">
             Supabase isn’t configured in this environment, so the UI is reading
             from in-memory mock data.
           </p>
         )}
         {latest && (
-          <dl className="mt-3 grid grid-cols-2 gap-3 rounded-2xl border border-white/5 bg-slate-900/40 p-4 text-sm">
+          <dl className="mt-3 grid grid-cols-2 gap-3 rounded-3xl border border-white/80 bg-white p-5 text-sm shadow-sm sm:grid-cols-3">
             <ImportField label="Status" value={latest.status} />
             <ImportField
               label="Started"
@@ -78,14 +86,14 @@ export function AboutPage() {
             <ImportField label="Held back" value={String(latest.heldBackCount)} />
             <ImportField label="Missing" value={String(latest.missingCount)} />
             {latest.notes && (
-              <div className="col-span-2 text-xs text-slate-400">
+              <div className="col-span-2 text-xs text-slate-500 sm:col-span-3">
                 {latest.notes}
               </div>
             )}
           </dl>
         )}
         {latest === null && supabaseConfigured && (
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm font-semibold text-slate-600">
             No import runs yet. The scheduled function will fire on its next
             cron tick.
           </p>
@@ -97,9 +105,11 @@ export function AboutPage() {
 
 function ImportField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-1 text-slate-200">{value}</dd>
+    <div className="rounded-2xl bg-slate-50 px-3 py-2">
+      <dt className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-sm font-bold text-slate-800">{value}</dd>
     </div>
   );
 }
