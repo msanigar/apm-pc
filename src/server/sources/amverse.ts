@@ -109,8 +109,10 @@ type AmversePage = {
 function inferCategory(name: string): ItemCategory {
   const n = name.toLowerCase();
   if (/\bpotion\b/.test(n)) return "potion";
-  if (/\begg\b/.test(n)) return "egg";
+  // Stroller must be checked BEFORE egg so "Egg Stroller" lands in `stroller`
+  // rather than `egg` (the substring "egg" matches both).
   if (/\bstroller\b/.test(n)) return "stroller";
+  if (/\begg\b/.test(n)) return "egg";
   if (/\b(toy|plushie|sticker|chew toy|rattle|box)\b/.test(n)) return "toy";
   if (/\bgift\b/.test(n)) return "gift";
   // Food / consumables. Word-boundary matched so we don't grab pet names that

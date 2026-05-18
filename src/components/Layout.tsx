@@ -31,6 +31,12 @@ export function Layout({ children }: LayoutProps) {
           <nav className="flex items-center gap-1 text-sm font-semibold text-slate-600">
             <Link
               className="rounded-full px-3 py-1.5 transition hover:bg-brand-100 hover:text-brand-700"
+              to="/trade"
+            >
+              Trade
+            </Link>
+            <Link
+              className="rounded-full px-3 py-1.5 transition hover:bg-brand-100 hover:text-brand-700"
               to="/about"
             >
               About

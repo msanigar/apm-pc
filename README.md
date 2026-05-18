@@ -236,7 +236,31 @@ Writes only happen via the **service role key**, which lives exclusively in
 Netlify Functions.
 
 Storage: create a public bucket named `adopt-me` (or override via
-`SUPABASE_IMAGE_BUCKET`). Images live at `items/<slug>.webp`.
+`SUPABASE_IMAGE_BUCKET`). Images live at `items/<slug>.<ext>` and are
+served via the public CDN URL (`<SUPABASE_URL>/storage/v1/object/public/<bucket>/items/<slug>.<ext>`).
+
+### Seeding images
+
+Run the one-off backfill to pull every available image into Storage:
+
+```sh
+npm run backfill:images -- --dry-run   # preview what would be fetched
+npm run backfill:images                # actually do it (~5 min for ~3000 items)
+npm run backfill:images -- --refresh   # force re-download everything
+```
+
+The script:
+- Runs every enabled value adapter once and harvests `imageUrl` hints
+  (AMVerse covers ~all pets/items; AMTV adds a few).
+- Walks `Category:Eggs` on the Adopt Me Fandom wiki and resolves each
+  page's `{{Eggs|image=...}}` filename through MediaWiki's imageinfo API
+  (this is the only path that yields egg images today).
+- For every `items` row without an `image_path` (unless `--refresh`),
+  uploads the source bytes into Storage and writes the path back.
+
+The same step runs in the nightly value sync for any newly-added items —
+existing items are skipped (we only fetch when `image_path` is NULL), so
+re-runs are cheap.
 
 ---
 

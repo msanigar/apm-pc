@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ItemCategory } from "@shared/types";
 import { CategoryFilter } from "@/components/CategoryFilter";
+import { RarityFilter, normalizeRarity } from "@/components/RarityFilter";
 import { SearchBox } from "@/components/SearchBox";
 import { SearchResults } from "@/components/SearchResults";
 import { useSearchIndex } from "@/lib/useSearchIndex";
@@ -10,6 +11,7 @@ import { PawIcon } from "@/components/icons";
 export function HomePage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ItemCategory | null>(null);
+  const [rarity, setRarity] = useState<string | null>(null);
   const { items, fuse, isLoading, error, generatedAt } = useSearchIndex();
 
   // Only show filter chips for categories that actually have items in this
@@ -19,6 +21,19 @@ export function HomePage() {
     for (const item of items) set.add(item.category);
     return set;
   }, [items]);
+
+  // Rarities present in the visible dataset, intersected with the active
+  // category. E.g. browsing "Egg" should only show "Legendary" (every
+  // current egg is legendary). Items without a rarity are skipped.
+  const availableRarities = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) {
+      if (category && item.category !== category) continue;
+      const r = normalizeRarity(item.rarity);
+      if (r) set.add(r);
+    }
+    return set;
+  }, [items, category]);
 
   useEffect(() => {
     function onExample(e: Event) {
@@ -52,8 +67,30 @@ export function HomePage() {
         </h2>
         <CategoryFilter
           selected={category}
-          onSelect={setCategory}
+          onSelect={(next) => {
+            setCategory(next);
+            // If switching to a category that no longer contains the active
+            // rarity, drop the rarity filter rather than starve the results.
+            if (next && rarity) {
+              const stillAvailable = items.some(
+                (i) =>
+                  i.category === next && normalizeRarity(i.rarity) === rarity
+              );
+              if (!stillAvailable) setRarity(null);
+            }
+          }}
           availableCategories={availableCategories}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="px-1 text-xs font-extrabold uppercase tracking-widest text-slate-500">
+          Filter by rarity
+        </h2>
+        <RarityFilter
+          selected={rarity}
+          onSelect={setRarity}
+          availableRarities={availableRarities}
         />
       </div>
 
@@ -71,7 +108,9 @@ export function HomePage() {
           items={items}
           query={query}
           category={category}
+          rarity={rarity}
           onClearCategory={() => setCategory(null)}
+          onClearRarity={() => setRarity(null)}
         />
       )}
 

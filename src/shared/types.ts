@@ -87,10 +87,51 @@ export type SearchIndexResponse = {
   items: SearchIndexItem[];
 };
 
+/**
+ * Hatch rarity tier as published by the Adopt Me wiki. The string values match
+ * the `text` rarities stored in `egg_hatch_odds` / `egg_hatch_pets`.
+ */
+export type HatchRarity =
+  | "common"
+  | "uncommon"
+  | "rare"
+  | "ultra_rare"
+  | "legendary";
+
+export type EggHatchOdds = {
+  rarity: HatchRarity;
+  probabilityPct: number | null;
+};
+
+export type EggHatchPet = {
+  /** Slug if the pet is in our catalog, otherwise null (linked chip will be greyed). */
+  petSlug: string | null;
+  petName: string;
+  rarity: HatchRarity;
+  imageUrl?: string | null;
+};
+
+export type HatchedFromEgg = {
+  eggSlug: string;
+  eggName: string;
+  rarity: HatchRarity;
+};
+
 export type ItemDetailResponse = {
   item: Item;
   imageUrl?: string | null;
   values: AggregatedVariantValue[];
+  /** Populated when `item.category === 'egg'`. */
+  hatchesInto?: {
+    odds: EggHatchOdds[];
+    pets: EggHatchPet[];
+    /** Last-fetched-at across all hatch rows for this egg, ISO 8601. */
+    fetchedAt?: string | null;
+    /** Adapter name (e.g. "fandom_wiki"). Single source for now. */
+    source?: string | null;
+  };
+  /** Populated when `item.category === 'pet'`. */
+  hatchesFrom?: HatchedFromEgg[];
 };
 
 /**

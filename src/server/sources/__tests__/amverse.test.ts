@@ -75,6 +75,36 @@ describe("parseAmversePage", () => {
     expect(dog?.category).toBe("pet");
   });
 
+  it("classifies 'Egg Stroller' as a stroller, not an egg", () => {
+    // Regression: the original substring check matched "egg" first and ate
+    // every stroller-with-egg-in-the-name. We need stroller to win.
+    const synthetic = [
+      {
+        petId: "test-egg-stroller",
+        name: "Egg Stroller",
+        rarity: "rare",
+        imageUrl: null,
+        elve: { rvalue: 5 },
+      },
+    ];
+    const synthRows = parseAmversePage(synthetic as never);
+    expect(synthRows[0]?.category).toBe("stroller");
+  });
+
+  it("classifies plain eggs as 'egg'", () => {
+    const synthetic = [
+      {
+        petId: "test-jungle-egg",
+        name: "Jungle Egg",
+        rarity: "rare",
+        imageUrl: null,
+        elve: { rvalue: 12 },
+      },
+    ];
+    const synthRows = parseAmversePage(synthetic as never);
+    expect(synthRows[0]?.category).toBe("egg");
+  });
+
   it("passes through image URLs for the cache layer", () => {
     const shadow = rows.find((r) => r.sourceItemName === "Shadow Dragon");
     expect(shadow?.imageUrl).toMatch(/^https?:\/\/.+\.(png|webp|jpg|jpeg)$/i);

@@ -1,0 +1,59 @@
+{{Ambiguous|[[Royal Aztec Egg]]}}
+{{Eggs
+|image = Aztec Egg.png
+|caption = The Aztec Egg in a player's inventory.
+|price = {{Bucks|750}} Free ([[Task Board]])
+|common = 35%
+|uncommon = 25%
+|rare = 24%
+|ultra-rare = 12%
+|legendary = 4%
+}}
+The '''Aztec Egg''' is a limited legendary [[Eggs|egg]] in ''Adopt Me!''.
+
+== Obtainable Pets ==
+
+{| class="article-table"
+|-
+!Pet
+!Image
+!Rarity
+!Chance
+|-
+|[[Tegu]]
+|[[File:Tegu.png|center|80x80px]]
+|Common
+|35%
+|-
+|[[Tree Frog]]
+|[[File:Tree Frog.png|center|70x70px]]
+|Uncommon
+|25%
+|-
+|[[Chanekeh]]
+|[[File:Chanekeh.png|center|80x80px]]
+|rowspan=2|Rare
+|rowspan=2|24%
+|-
+|[[Water Opossum]]
+|[[File:Water Opossum.png|center|90x90px]]
+|-
+|[[Ehecatl]]
+|[[File:Ehecatl.png|center|80x80px]]
+|rowspan=2|Ultra-Rare
+|rowspan=2|12%
+|-
+|[[Onza]]
+|[[File:Onza.png|center|80x80px]]
+|-
+|[[Quetzalcoatl]]
+|[[File:Quetzalcoatl.png|center|80x80px]]
+|rowspan=2|Legendary
+|rowspan=2|4%
+|-
+|[[Temple Friend]]
+|[[File:Temple Friend.png|center|80x80px]]
+|}
+
+[[Category:Eggs]]
+[[Category:Limited]]

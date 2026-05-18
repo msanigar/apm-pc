@@ -1,6 +1,10 @@
 import type {
   AggregatedVariantValue,
   CandidateRow,
+  EggHatchOdds,
+  EggHatchPet,
+  HatchedFromEgg,
+  HatchRarity,
   ImportRunStatus,
   ImportRunSummary,
   Item,
@@ -12,6 +16,7 @@ import type {
 } from "../shared/types";
 import { aggregateValues, confidenceFor } from "../shared/aggregate";
 import { variantsForCategory } from "../shared/variants";
+import { publicImageUrl } from "./images";
 import { requireSupabaseAdmin } from "./supabase";
 import { MOCK_FIXTURES } from "./sources/mockFixtures";
 import { toSlug } from "../shared/slug";
@@ -359,6 +364,13 @@ export async function loadSearchIndex(): Promise<SearchIndexItem[]> {
 export async function loadItemBySlug(slug: string): Promise<{
   item: Item;
   values: AggregatedVariantValue[];
+  hatchesInto?: {
+    odds: EggHatchOdds[];
+    pets: EggHatchPet[];
+    fetchedAt: string | null;
+    source: string | null;
+  };
+  hatchesFrom?: HatchedFromEgg[];
 } | null> {
   const db = requireSupabaseAdmin();
   const { data: item, error } = await db
@@ -375,9 +387,32 @@ export async function loadItemBySlug(slug: string): Promise<{
     )
     .eq("item_id", item.id);
   if (aggErr) throw aggErr;
+
+  // Side-channel: pull hatch data when category warrants it. Each branch
+  // catches its own errors so a hatch-table issue never breaks the value
+  // page that worked perfectly fine before this feature shipped.
+  let hatchesInto: Awaited<ReturnType<typeof loadHatchesIntoForEgg>> | undefined;
+  let hatchesFrom: HatchedFromEgg[] | undefined;
+  try {
+    if ((item as any).category === "egg") {
+      hatchesInto = await loadHatchesIntoForEgg(item.id as string);
+      // Don't bother sending an empty payload over the wire.
+      if (hatchesInto.odds.length === 0 && hatchesInto.pets.length === 0) {
+        hatchesInto = undefined;
+      }
+    } else if ((item as any).category === "pet") {
+      const eggs = await loadHatchedFromForPet(item.id as string);
+      if (eggs.length > 0) hatchesFrom = eggs;
+    }
+  } catch (err) {
+    console.warn(`[repo] hatch lookup for ${slug} failed:`, err);
+  }
+
   return {
     item: mapItem(item),
     values: (aggs ?? []).map(mapAggregated),
+    hatchesInto,
+    hatchesFrom,
   };
 }
 
@@ -427,9 +462,7 @@ function buildSearchIndexItem(
     rarity: (itemRow.rarity as string | null) ?? null,
     aliases: (itemRow.aliases as string[] | null) ?? [],
     isHighTier: Boolean(itemRow.is_high_tier),
-    imageUrl: itemRow.image_path
-      ? `/${itemRow.image_path}`.replace(/^\/+/, "/")
-      : null,
+    imageUrl: publicImageUrl(itemRow.image_path),
     values,
   };
 }
@@ -440,6 +473,264 @@ function buildSearchIndexItem(
  * fixtures the adapters use and aggregates them with a fake "1 source" so the
  * UI has something to render.
  */
+/* ─────────────────── Egg hatching data ─────────────────── */
+
+export type EggHatchOddsUpsert = {
+  eggSlug: string;
+  rarity: HatchRarity;
+  probabilityPct: number | null;
+  source: string;
+  sourceRevisionId: string | null;
+  fetchedAt: string;
+};
+
+export type EggHatchPetUpsert = {
+  eggSlug: string;
+  petSlug: string;
+  petDisplayName: string;
+  rarity: HatchRarity;
+  source: string;
+  sourceRevisionId: string | null;
+  fetchedAt: string;
+};
+
+export type ReplaceHatchDataResult = {
+  oddsCount: number;
+  petsCount: number;
+  unmatchedEggSlugs: string[];
+  unresolvedPetSlugs: string[];
+};
+
+/**
+ * Replace the hatch dataset for every egg the adapter just emitted.
+ *
+ * For each affected `egg_id`, we DELETE existing rows from the same `source`
+ * and then INSERT the new rows. This way pet/rarity changes (additions AND
+ * removals) propagate cleanly on every sync.
+ *
+ * Items not in our catalog are skipped:
+ *   - Eggs that don't resolve to an `items.id` are recorded in `unmatchedEggSlugs`.
+ *   - Pets that don't resolve are kept (with `pet_id = null` + a snapshot slug)
+ *     so the wiki's hatch list still renders; their slugs are reported in
+ *     `unresolvedPetSlugs` for visibility.
+ */
+export async function replaceEggHatchData(input: {
+  odds: EggHatchOddsUpsert[];
+  pets: EggHatchPetUpsert[];
+}): Promise<ReplaceHatchDataResult> {
+  const db = requireSupabaseAdmin();
+
+  // Build the slug → item-id map once. We need it for both eggs and pets.
+  const slugToId = await loadAllItemSlugIds();
+
+  const unmatchedEggSlugs = new Set<string>();
+  const unresolvedPetSlugs = new Set<string>();
+
+  // Group affected eggs/sources so we can delete in bulk.
+  const affectedEggIdsBySource = new Map<string, Set<string>>();
+  function noteAffected(eggId: string, source: string) {
+    let set = affectedEggIdsBySource.get(source);
+    if (!set) {
+      set = new Set();
+      affectedEggIdsBySource.set(source, set);
+    }
+    set.add(eggId);
+  }
+
+  const oddsPayload: Record<string, unknown>[] = [];
+  for (const row of input.odds) {
+    const eggId = slugToId.get(row.eggSlug);
+    if (!eggId) {
+      unmatchedEggSlugs.add(row.eggSlug);
+      continue;
+    }
+    noteAffected(eggId, row.source);
+    oddsPayload.push({
+      egg_id: eggId,
+      rarity: row.rarity,
+      probability_pct: row.probabilityPct,
+      source: row.source,
+      source_revision_id: row.sourceRevisionId,
+      fetched_at: row.fetchedAt,
+    });
+  }
+
+  const petsPayload: Record<string, unknown>[] = [];
+  for (const row of input.pets) {
+    const eggId = slugToId.get(row.eggSlug);
+    if (!eggId) {
+      unmatchedEggSlugs.add(row.eggSlug);
+      continue;
+    }
+    const petId = slugToId.get(row.petSlug) ?? null;
+    if (petId == null) unresolvedPetSlugs.add(row.petSlug);
+    noteAffected(eggId, row.source);
+    petsPayload.push({
+      egg_id: eggId,
+      pet_id: petId,
+      pet_slug_snapshot: petId == null ? row.petSlug : null,
+      pet_display_name: row.petDisplayName,
+      rarity: row.rarity,
+      source: row.source,
+      source_revision_id: row.sourceRevisionId,
+      fetched_at: row.fetchedAt,
+    });
+  }
+
+  // Delete existing rows for every (egg, source) pair we're about to refresh.
+  for (const [source, eggIds] of affectedEggIdsBySource) {
+    const ids = Array.from(eggIds);
+    // PostgREST `.in()` lists are practically limited to ~300 items; chunk.
+    for (let i = 0; i < ids.length; i += 300) {
+      const chunk = ids.slice(i, i + 300);
+      const oddsDel = await db
+        .from("egg_hatch_odds")
+        .delete()
+        .eq("source", source)
+        .in("egg_id", chunk);
+      if (oddsDel.error) throw oddsDel.error;
+      const petsDel = await db
+        .from("egg_hatch_pets")
+        .delete()
+        .eq("source", source)
+        .in("egg_id", chunk);
+      if (petsDel.error) throw petsDel.error;
+    }
+  }
+
+  const oddsCount = await bulkInsert("egg_hatch_odds", oddsPayload);
+  const petsCount = await bulkInsert("egg_hatch_pets", petsPayload);
+
+  return {
+    oddsCount,
+    petsCount,
+    unmatchedEggSlugs: Array.from(unmatchedEggSlugs),
+    unresolvedPetSlugs: Array.from(unresolvedPetSlugs),
+  };
+}
+
+/**
+ * Page through `items` to build a slug → id map. Used by the hatch sync to
+ * resolve egg/pet slugs after the value sync has upserted everything.
+ */
+export async function loadAllItemSlugIds(): Promise<Map<string, string>> {
+  const db = requireSupabaseAdmin();
+  const map = new Map<string, string>();
+  const PAGE = 1000;
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await db
+      .from("items")
+      .select("id, slug")
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const row of data) map.set(row.slug as string, row.id as string);
+    if (data.length < PAGE) break;
+  }
+  return map;
+}
+
+/**
+ * Fetch the "Hatches into" payload for an egg item — the per-tier odds plus
+ * the pet roster (with pet display name + slug + image where available).
+ */
+export async function loadHatchesIntoForEgg(eggId: string): Promise<{
+  odds: EggHatchOdds[];
+  pets: EggHatchPet[];
+  fetchedAt: string | null;
+  source: string | null;
+}> {
+  const db = requireSupabaseAdmin();
+
+  const [oddsRes, petsRes] = await Promise.all([
+    db
+      .from("egg_hatch_odds")
+      .select("rarity, probability_pct, source, fetched_at")
+      .eq("egg_id", eggId),
+    db
+      .from("egg_hatch_pets")
+      .select(
+        "rarity, pet_slug_snapshot, pet_display_name, source, fetched_at, pet:items(slug, name, image_path)"
+      )
+      .eq("egg_id", eggId),
+  ]);
+  if (oddsRes.error) throw oddsRes.error;
+  if (petsRes.error) throw petsRes.error;
+
+  const odds: EggHatchOdds[] = (oddsRes.data ?? []).map((row: any) => ({
+    rarity: row.rarity as HatchRarity,
+    probabilityPct: row.probability_pct != null ? Number(row.probability_pct) : null,
+  }));
+
+  const pets: EggHatchPet[] = (petsRes.data ?? []).map((row: any) => {
+    const linked = row.pet ?? null;
+    return {
+      petSlug: (linked?.slug as string) ?? null,
+      petName:
+        (linked?.name as string) ??
+        (row.pet_display_name as string | null) ??
+        (row.pet_slug_snapshot as string | null) ??
+        "Unknown pet",
+      rarity: row.rarity as HatchRarity,
+      imageUrl: publicImageUrl(linked?.image_path ?? null),
+    };
+  });
+
+  const fetchedAt = pickNewestTimestamp([
+    ...(oddsRes.data ?? []).map((r: any) => r.fetched_at),
+    ...(petsRes.data ?? []).map((r: any) => r.fetched_at),
+  ]);
+  const source =
+    (oddsRes.data?.[0] as any)?.source ?? (petsRes.data?.[0] as any)?.source ?? null;
+
+  return { odds: orderOddsByTier(odds), pets, fetchedAt, source };
+}
+
+/**
+ * Reverse lookup: for a pet item, list the eggs that hatch it and the
+ * rarity tier in each.
+ */
+export async function loadHatchedFromForPet(petId: string): Promise<HatchedFromEgg[]> {
+  const db = requireSupabaseAdmin();
+  const { data, error } = await db
+    .from("egg_hatch_pets")
+    .select("rarity, egg:items(slug, name)")
+    .eq("pet_id", petId);
+  if (error) throw error;
+  const out: HatchedFromEgg[] = [];
+  for (const row of (data ?? []) as any[]) {
+    if (!row.egg?.slug) continue;
+    out.push({
+      eggSlug: row.egg.slug as string,
+      eggName: (row.egg.name as string) ?? (row.egg.slug as string),
+      rarity: row.rarity as HatchRarity,
+    });
+  }
+  // Stable sort by egg name for predictable UI.
+  return out.sort((a, b) => a.eggName.localeCompare(b.eggName));
+}
+
+const TIER_ORDER: Record<HatchRarity, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  ultra_rare: 3,
+  legendary: 4,
+};
+
+function orderOddsByTier(rows: EggHatchOdds[]): EggHatchOdds[] {
+  return [...rows].sort((a, b) => TIER_ORDER[a.rarity] - TIER_ORDER[b.rarity]);
+}
+
+function pickNewestTimestamp(stamps: Array<string | null | undefined>): string | null {
+  let best: string | null = null;
+  for (const s of stamps) {
+    if (!s) continue;
+    if (best == null || s > best) best = s;
+  }
+  return best;
+}
+
 export function buildMockSearchIndex(): SearchIndexItem[] {
   return MOCK_FIXTURES.map((item) => {
     const values: SearchIndexItem["values"] = {};

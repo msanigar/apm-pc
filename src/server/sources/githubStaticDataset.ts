@@ -50,11 +50,13 @@ const IRONBABA_SOURCE_NAME = "github_ironbabatekkral";
 const HIGH_TIER_SOURCE_NAME = "github_high_tier";
 
 // Items the calculator ships but that we want to classify as non-pets.
+// Order matters: a name like "Egg Stroller" must hit `stroller` before `egg`,
+// so the stroller pattern is listed first.
 const NON_PET_NAME_HINTS: Array<[RegExp, ItemCategory]> = [
   [/\bpotion\b/i, "potion"],
+  [/\bstroller\b/i, "stroller"],
   [/\begg\b/i, "egg"],
   [/\bgift\b/i, "gift"],
-  [/\bstroller\b/i, "stroller"],
   [/\b(scooter|airboat|board|car|truck|bike)\b/i, "vehicle"],
   // Same end-anchored "actually-a-food-item" heuristic as the AMVerse adapter.
   // Keep these in sync with src/server/sources/amverse.ts inferCategory().

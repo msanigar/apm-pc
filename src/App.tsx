@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { HomePage } from "@/pages/HomePage";
 import { ItemDetailPage } from "@/pages/ItemDetailPage";
 import { AboutPage } from "@/pages/AboutPage";
+import { TradePage } from "@/pages/TradePage";
 
 export function App() {
   return (
@@ -10,6 +11,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/items/:slug" element={<ItemDetailPage />} />
+        <Route path="/trade" element={<TradePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

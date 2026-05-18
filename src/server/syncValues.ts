@@ -17,6 +17,7 @@ import {
   loadLiveDataset,
   promoteCandidateRows,
   recordSourceValues,
+  replaceEggHatchData,
   saveValidationIssues,
   storeSuspiciousCandidates,
   upsertItems,
@@ -24,6 +25,7 @@ import {
 } from "./repo";
 import { getEnabledAdapters, type SourceAdapter } from "./sources";
 import { MOCK_FIXTURES } from "./sources/mockFixtures";
+import { fetchFandomEggs } from "./sources/fandomEggs";
 import { toSlug } from "../shared/slug";
 import { hasSupabaseAdmin } from "./supabase";
 
@@ -189,9 +191,54 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     // 4. Always log raw per-source values for future debugging.
     await recordSourceValues(candidate.rows, slugToId, now);
 
-    // 5. Cache any source-provided images for the rows we accepted.
-    const imageUrls = buildImageUrlMap();
-    await cacheImagesForRows(safeRows, imageUrls);
+    // 5. Cache any source-provided images for the rows we accepted. The
+    //    helper is idempotent and only fetches when `items.image_path` is
+    //    still NULL, so re-runs don't re-download anything.
+    const imageUrls = buildImageUrlMap(slugMeta);
+    const imageResult = await cacheImagesForRows(safeRows, imageUrls);
+    if (imageResult.uploaded > 0 || imageResult.errors > 0) {
+      console.info(
+        `[sync] images: uploaded=${imageResult.uploaded} ` +
+          `skipped_present=${imageResult.skippedAlreadyCached} ` +
+          `skipped_missing=${imageResult.skippedMissingItem} ` +
+          `errors=${imageResult.errors}`
+      );
+    }
+
+    // 6. Refresh egg hatch data from Fandom, gated by env. Failures here are
+    //    logged but never affect the main run's status — values are the
+    //    primary deliverable.
+    if (isFandomEggsEnabled()) {
+      try {
+        const payload = await fetchFandomEggs();
+        const result = await replaceEggHatchData({
+          odds: payload.odds.map((o) => ({
+            eggSlug: o.eggSlug,
+            rarity: o.rarity,
+            probabilityPct: o.probabilityPct,
+            source: o.source,
+            sourceRevisionId: o.sourceRevisionId,
+            fetchedAt: payload.fetchedAt,
+          })),
+          pets: payload.pets.map((p) => ({
+            eggSlug: p.eggSlug,
+            petSlug: p.petSlug,
+            petDisplayName: p.petDisplayName,
+            rarity: p.rarity,
+            source: p.source,
+            sourceRevisionId: p.sourceRevisionId,
+            fetchedAt: payload.fetchedAt,
+          })),
+        });
+        console.info(
+          `[sync] fandom eggs: ${result.oddsCount} odds rows, ${result.petsCount} pet rows ` +
+            `(eggs=${payload.eggCount}, unmatched=${result.unmatchedEggSlugs.length}, ` +
+            `unresolvedPets=${result.unresolvedPetSlugs.length})`
+        );
+      } catch (err) {
+        console.warn("[sync] fandom egg refresh failed:", err);
+      }
+    }
 
     const status: ImportRunStatus = heldBackRows.length > 0 ? "partial" : "promoted";
     await completeImportRun(importRun.id, {
@@ -337,10 +384,12 @@ function buildItemUpserts(
   return out;
 }
 
-function buildImageUrlMap(): Map<string, string> {
-  // Hook for when adapters start emitting `imageUrl` consistently. For now
-  // the mock adapters don't, so this returns an empty map.
-  return new Map<string, string>();
+function buildImageUrlMap(slugMeta: Map<string, SlugMeta>): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [slug, meta] of slugMeta) {
+    if (meta.imageUrl) out.set(slug, meta.imageUrl);
+  }
+  return out;
 }
 
 const RARITY_ORDER = [
@@ -363,6 +412,13 @@ function titleCaseFromSlug(slug: string): string {
     .filter(Boolean)
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+function isFandomEggsEnabled(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const v = env.ENABLE_FANDOM_EGGS?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
 // Re-exports kept handy for callers

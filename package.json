@@ -15,6 +15,8 @@
     "lint": "eslint .",
     "preflight": "tsx scripts/preflight.ts",
     "sync:local": "tsx scripts/runSyncLocal.ts",
+    "sync:eggs": "tsx scripts/syncEggs.ts",
+    "backfill:images": "tsx scripts/backfillImages.ts",
     "wipe:local": "tsx scripts/wipeData.ts",
     "verify:data": "tsx scripts/verifyData.ts",
     "dump:catalog": "tsx scripts/dumpCatalog.ts"

@@ -3,7 +3,8 @@ import type Fuse from "fuse.js";
 import type { ItemCategory, SearchIndexItem, Variant } from "@shared/types";
 import { parseSearchQuery } from "@shared/parseSearchQuery";
 import { ResultCard } from "./ResultCard";
-import { getCategoryTheme } from "@/lib/theme";
+import { normalizeRarity } from "@/components/RarityFilter";
+import { getCategoryTheme, getRarityTheme } from "@/lib/theme";
 import { XIcon } from "@/components/icons";
 
 type Props = {
@@ -11,7 +12,9 @@ type Props = {
   items: SearchIndexItem[];
   query: string;
   category?: ItemCategory | null;
+  rarity?: string | null;
   onClearCategory?: () => void;
+  onClearRarity?: () => void;
   /** How many results to show in the first page. The user can load more in 25-row pages. */
   pageSize?: number;
 };
@@ -21,7 +24,9 @@ export function SearchResults({
   items,
   query,
   category = null,
+  rarity = null,
   onClearCategory,
+  onClearRarity,
   pageSize = 25,
 }: Props) {
   const parsed = useMemo(() => parseSearchQuery(query), [query]);
@@ -32,7 +37,7 @@ export function SearchResults({
    * thousands of items because we never re-rank on "Show more".
    */
   const ranked = useMemo(() => {
-    if (!parsed.normalizedQuery && !category) return [];
+    if (!parsed.normalizedQuery && !category && !rarity) return [];
 
     let candidates: SearchIndexItem[];
     if (!parsed.normalizedQuery) {
@@ -40,8 +45,8 @@ export function SearchResults({
     } else if (!fuse) {
       return [];
     } else {
-      // Pull a generous Fuse window so category filtering doesn't starve the
-      // list. We re-rank below.
+      // Pull a generous Fuse window so filtering doesn't starve the list.
+      // We re-rank below.
       candidates = fuse
         .search(parsed.normalizedQuery, { limit: 500 })
         .map((h) => h.item);
@@ -49,6 +54,11 @@ export function SearchResults({
 
     if (category) {
       candidates = candidates.filter((i) => i.category === category);
+    }
+    if (rarity) {
+      candidates = candidates.filter(
+        (i) => normalizeRarity(i.rarity) === rarity
+      );
     }
 
     const variant = parsed.requestedVariant;
@@ -67,46 +77,54 @@ export function SearchResults({
     }
 
     // No specific variant requested. If there's a text query we keep Fuse's
-    // relevance order; for pure category browsing we sort by "top value" so
-    // the most interesting items show up first.
-    if (!parsed.normalizedQuery && category) {
+    // relevance order; for pure category/rarity browsing we sort by "top
+    // value" so the most interesting items show up first.
+    if (!parsed.normalizedQuery && (category || rarity)) {
       return [...candidates].sort((a, b) => topValueOf(b) - topValueOf(a));
     }
 
     return candidates;
-  }, [fuse, items, parsed.normalizedQuery, parsed.requestedVariant, category]);
+  }, [fuse, items, parsed.normalizedQuery, parsed.requestedVariant, category, rarity]);
 
-  // How many results to show. Resets to `pageSize` whenever the query or
-  // category filter changes so the user always lands on the most relevant
-  // top-N first.
+  // How many results to show. Resets to `pageSize` whenever any active
+  // filter changes so the user always lands on the most relevant top-N first.
   const [visibleCount, setVisibleCount] = useState(pageSize);
   useEffect(() => {
     setVisibleCount(pageSize);
-  }, [parsed.normalizedQuery, parsed.requestedVariant, category, pageSize]);
+  }, [parsed.normalizedQuery, parsed.requestedVariant, category, rarity, pageSize]);
 
-  if (!parsed.normalizedQuery && !category) {
+  if (!parsed.normalizedQuery && !category && !rarity) {
     return <ExamplesPanel items={items} />;
   }
 
   const total = ranked.length;
   const visible = ranked.slice(0, visibleCount);
 
-  // Did Fuse find matches that got filtered out by the active category? If so
+  // Did Fuse find matches that got filtered out by the active filters? If so
   // we want to nudge the user — "Hey, your filter is hiding them."
   const totalUnfiltered =
     parsed.normalizedQuery && fuse
       ? fuse.search(parsed.normalizedQuery, { limit: 50 }).length
       : 0;
   const filterIsHidingMatches =
-    visible.length === 0 && category != null && totalUnfiltered > 0;
+    visible.length === 0 && (category != null || rarity != null) && totalUnfiltered > 0;
 
   if (visible.length === 0) {
     const what = query.trim()
       ? `\u201C${query}\u201D`
-      : category
-        ? `the ${getCategoryTheme(category).label} category`
-        : "your search";
-    const categoryLabel = category ? getCategoryTheme(category).label : null;
+      : rarity && category
+        ? `${getRarityTheme(rarity)!.label} ${getCategoryTheme(category).label.toLowerCase()}s`
+        : category
+          ? `the ${getCategoryTheme(category).label} category`
+          : rarity
+            ? `${getRarityTheme(rarity)!.label} items`
+            : "your search";
+    const activeFilterLabel = [
+      category ? getCategoryTheme(category).label : null,
+      rarity ? getRarityTheme(rarity)!.label : null,
+    ]
+      .filter((s): s is string => Boolean(s))
+      .join(" + ");
     return (
       <div className="rounded-3xl border-2 border-dashed border-brand-200 bg-white/70 p-8 text-center shadow-sm">
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-bubble-100 text-3xl">
@@ -115,24 +133,27 @@ export function SearchResults({
         <p className="text-base font-bold text-slate-700">
           Nothing found for {what}.
         </p>
-        {filterIsHidingMatches && categoryLabel && onClearCategory ? (
+        {filterIsHidingMatches && activeFilterLabel ? (
           <>
             <p className="mt-1 text-sm text-slate-500">
-              The <span className="font-bold">{categoryLabel}</span> filter is
-              hiding {totalUnfiltered} other{" "}
-              {totalUnfiltered === 1 ? "match" : "matches"}.
+              The <span className="font-bold">{activeFilterLabel}</span> filter
+              {category && rarity ? "s are" : " is"} hiding {totalUnfiltered}{" "}
+              other {totalUnfiltered === 1 ? "match" : "matches"}.
             </p>
             <button
               type="button"
-              onClick={onClearCategory}
+              onClick={() => {
+                onClearCategory?.();
+                onClearRarity?.();
+              }}
               className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-bubble-500 px-4 py-2 text-sm font-extrabold text-white shadow-md transition hover:-translate-y-0.5 active:scale-95"
             >
-              Clear filter
+              Clear filters
             </button>
           </>
         ) : (
           <p className="mt-1 text-sm text-slate-500">
-            Try fewer letters, or pick a different category.
+            Try fewer letters, or adjust your filters.
           </p>
         )}
       </div>
@@ -155,6 +176,17 @@ export function SearchResults({
             title="Clear category filter"
           >
             {getCategoryTheme(category).label} filter active
+            <XIcon size={12} />
+          </button>
+        )}
+        {rarity && onClearRarity && (
+          <button
+            type="button"
+            onClick={onClearRarity}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition hover:opacity-80 ${getRarityTheme(rarity)!.badgeClass}`}
+            title="Clear rarity filter"
+          >
+            {getRarityTheme(rarity)!.label} filter active
             <XIcon size={12} />
           </button>
         )}

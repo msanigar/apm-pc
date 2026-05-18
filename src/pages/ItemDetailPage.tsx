@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import type { ItemDetailResponse } from "@shared/types";
 import { fetchItem } from "@/lib/api";
 import { VariantValueTable } from "@/components/VariantValueTable";
+import { EggHatchSection } from "@/components/EggHatchSection";
+import { HatchedFromSection } from "@/components/HatchedFromSection";
 import { formatRelativeTime } from "@/lib/format";
 import { getCategoryTheme, getRarityTheme } from "@/lib/theme";
 import { ArrowLeftIcon, PawIcon, SparkleIcon } from "@/components/icons";
@@ -118,7 +120,20 @@ export function ItemDetailPage() {
         </div>
       </header>
 
+      {data.hatchesInto && (
+        <EggHatchSection
+          odds={data.hatchesInto.odds}
+          pets={data.hatchesInto.pets}
+          fetchedAt={data.hatchesInto.fetchedAt}
+          source={data.hatchesInto.source}
+        />
+      )}
+
       <VariantValueTable category={data.item.category} values={data.values} />
+
+      {data.hatchesFrom && data.hatchesFrom.length > 0 && (
+        <HatchedFromSection eggs={data.hatchesFrom} />
+      )}
 
       {data.item.aliases.length > 0 && (
         <p className="px-1 text-xs font-medium text-slate-500">

@@ -54,6 +54,24 @@ describe("parseGizmoHtml", () => {
   it("returns an empty list when the array is missing", () => {
     expect(parseGizmoHtml("<html><body>no pets here</body></html>")).toEqual([]);
   });
+
+  it("classifies 'Egg Stroller' as a stroller, not an egg", () => {
+    // Regression: the original NON_PET_NAME_HINTS ordering matched /\begg\b/i
+    // before /\bstroller\b/i so anything with "egg" in its name became an egg.
+    const html = `
+      <html><body><script>
+        const pets = [
+          { name: 'Egg Stroller', value: 5 },
+          { name: 'Jungle Egg',   value: 12 },
+        ];
+      </script></body></html>
+    `;
+    const synthRows = parseGizmoHtml(html);
+    const stroller = synthRows.find((r) => r.sourceItemName === "Egg Stroller");
+    const egg = synthRows.find((r) => r.sourceItemName === "Jungle Egg");
+    expect(stroller?.category).toBe("stroller");
+    expect(egg?.category).toBe("egg");
+  });
 });
 
 describe("parseIronbabaPayload", () => {

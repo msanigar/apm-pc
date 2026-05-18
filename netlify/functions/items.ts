@@ -3,6 +3,7 @@ import {
   buildMockSearchIndex,
   loadItemBySlug,
 } from "../../src/server/repo";
+import { publicImageUrl } from "../../src/server/images";
 import { hasSupabaseAdmin } from "../../src/server/supabase";
 import { badRequest, json, notFound, serverError } from "./_response";
 
@@ -43,8 +44,10 @@ export const handler: Handler = async (event) => {
     if (!result) return notFound();
     return json({
       item: result.item,
-      imageUrl: result.item.imagePath ? `/${result.item.imagePath}` : null,
+      imageUrl: publicImageUrl(result.item.imagePath),
       values: result.values,
+      hatchesInto: result.hatchesInto,
+      hatchesFrom: result.hatchesFrom,
     });
   } catch (err) {
     return serverError(err);

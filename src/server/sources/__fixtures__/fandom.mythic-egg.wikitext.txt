@@ -1,0 +1,66 @@
+{{Eggs
+|image = MythicEggRender.png
+|caption = The Mythic Egg in a player's inventory.
+|price = {{Bucks|750}}
+|common = 22%
+|uncommon = 19%
+|rare = 34%
+|ultra-rare = 20%
+|legendary = 5%
+}}
+The '''Mythic Egg''' is a limited legendary [[Eggs|egg]] in ''Adopt Me!''. It was released on August 19, 2021, replacing the [[Ocean Egg]]. It cost {{Bucks|750}} and could be purchased from the [[Gumball Machine]] in the [[Nursery]]. It was replaced by the [[Woodland Egg]] on March 17, 2022. The Mythic Egg can now only be obtained through [[Trade System|trading]].
+
+On July 16, 2021, a large red and white floating banner with multiple question marks was held by a flying [[Phoenix (Pet)|Phoenix]] and [[Wyvern]]. The banner was used as a countdown for the Mythic Egg release. Pillars and purple crystals were also added to decorate the [[Nursery]] and [[Adoption Island]].
+
+== Appearance ==
+The Mythic Egg has a variety of colors, with a greenish-blue gradient. Pointed scales wrap around the [[Eggs|egg]].
+
+== Obtainable Pets ==
+{| class="article-table"
+|-
+!Pet
+!Image
+!Rarity
+|-
+|[[Wolpertinger]]
+|[[File:AM Wolpertinger.png|center]]
+|Common
+|-
+|[[Kirin]]
+|[[File:KirinInventory.png|center]]
+|Uncommon
+|-
+|[[Merhorse]]
+|[[File:MerhorseIcon.png|center]]
+| rowspan="2" |Rare
+|-
+|[[Sasquatch]]
+|[[File:SasquatchIcon.png|center]]
+|-
+|[[Hydra]]
+|[[File:HydraIcon.png|center]]
+| rowspan="2" |Ultra-Rare
+|-
+|[[Wyvern]]
+|[[File:WyvernIcon.png|center]]
+|-
+|[[Goldhorn]]
+|[[File:GoldenHornMain-Render.png|center]]
+| rowspan="2" |Legendary
+|-
+|[[Phoenix (Pet)|Phoenix]]
+|[[File:PhoenixIcon.png|center]]
+|}
+
+== Gallery ==
+
+Mythic Egg Countdown Icon.png|The Mythic Egg countdown icon.
+Mythic Egg Banner.png|The Mythic Egg countdown banner, featuring the [[Phoenix (Pet)|Phoenix]] and the [[Wyvern]].
+Mythic egg in game.jpg|A Mythic Egg in-game.
+
+[[Category:Limited]]
+[[Category:Gumball Machine Eggs]]
+[[Category:Bucks]]
+[[Category:Legendary]]
+[[Category:Eggs]]
+[[Category:Unavailable]]
