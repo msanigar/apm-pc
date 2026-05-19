@@ -8,7 +8,12 @@ type Props = {
   rightLabel: string;
   onSwap: () => void;
   onReset: () => void;
-  onShare: () => void;
+  /**
+   * Minting a short URL hits the API, so `onShare` returns a Promise.
+   * We await it before flipping the button label so "Link copied!" only
+   * appears once the clipboard actually has something.
+   */
+  onShare: () => Promise<void> | void;
   isEmpty: boolean;
 };
 
@@ -22,11 +27,18 @@ export function TradeBalance({
   isEmpty,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
-  function handleShare() {
-    onShare();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  async function handleShare() {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      await onShare();
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } finally {
+      setSharing(false);
+    }
   }
 
   return (
@@ -37,8 +49,8 @@ export function TradeBalance({
         <ActionButton onClick={onSwap} disabled={isEmpty}>
           ⇄ Swap sides
         </ActionButton>
-        <ActionButton onClick={handleShare} disabled={isEmpty}>
-          {copied ? "Link copied!" : "Copy link"}
+        <ActionButton onClick={handleShare} disabled={isEmpty || sharing}>
+          {copied ? "Link copied!" : sharing ? "Generating…" : "Copy link"}
         </ActionButton>
         <ActionButton onClick={onReset} disabled={isEmpty} variant="danger">
           Reset

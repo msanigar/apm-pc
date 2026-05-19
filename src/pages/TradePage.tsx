@@ -88,11 +88,34 @@ export function TradePage() {
     setState(makeEmptyState());
   }, []);
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     if (typeof window === "undefined" || !navigator.clipboard) return;
     const encoded = encodeToQuery(state);
-    const url = `${window.location.origin}/trade${encoded ? `?${encoded}` : ""}`;
-    void navigator.clipboard.writeText(url);
+    const longUrl = `${window.location.origin}/trade${encoded ? `?${encoded}` : ""}`;
+
+    // Try to mint a short URL via the API; fall back to the long inline
+    // URL on any failure so the share flow never breaks. Race-safe: we
+    // copy whatever wins inside this single async pass and ignore stale
+    // state changes (the button is disabled while sharing anyway).
+    let url = longUrl;
+    if (encoded) {
+      try {
+        const res = await fetch("/api/short", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: encoded }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { url?: unknown };
+          if (typeof data?.url === "string" && data.url) {
+            url = data.url;
+          }
+        }
+      } catch {
+        // network error or offline — silently keep the long URL
+      }
+    }
+    await navigator.clipboard.writeText(url);
   }, [state]);
 
   const empty = isStateEmpty(state);

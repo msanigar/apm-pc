@@ -17,6 +17,7 @@
     "sync:local": "tsx scripts/runSyncLocal.ts",
     "sync:eggs": "tsx scripts/syncEggs.ts",
     "backfill:images": "tsx scripts/backfillImages.ts",
+    "build:assets": "tsx scripts/buildBrandAssets.ts",
     "wipe:local": "tsx scripts/wipeData.ts",
     "verify:data": "tsx scripts/verifyData.ts",
     "dump:catalog": "tsx scripts/dumpCatalog.ts"
@@ -51,6 +52,7 @@
     "jsdom": "^29.1.1",
     "netlify-cli": "^26.0.2",
     "postcss": "^8.5.14",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.1",
     "typescript": "^6.0.3",

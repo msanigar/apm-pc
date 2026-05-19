@@ -32,6 +32,25 @@
 [functions."sync-values"]
   schedule = "15 6 * * *"
 
+# Per-page OpenGraph / Twitter meta rewriting at the edge so Discord,
+# Twitter/X, iMessage, Slack, etc. show route-specific link previews.
+# See netlify/edge-functions/og-meta.ts for the rewrite logic.
+[[edge_functions]]
+  path = "/"
+  function = "og-meta"
+
+[[edge_functions]]
+  path = "/about"
+  function = "og-meta"
+
+[[edge_functions]]
+  path = "/trade"
+  function = "og-meta"
+
+[[edge_functions]]
+  path = "/items/*"
+  function = "og-meta"
+
 # Friendly URL rewrites for the API namespace.
 [[redirects]]
   from = "/api/health"
@@ -51,6 +70,19 @@
 [[redirects]]
   from = "/api/import-runs/latest"
   to = "/.netlify/functions/import-runs-latest"
+  status = 200
+
+[[redirects]]
+  from = "/api/short"
+  to = "/.netlify/functions/short-create"
+  status = 200
+
+# Short-link expander. Function emits its own 302 to /trade?... so the
+# rewrite here is just URL-prettifying; the redirect status is owned by
+# the function.
+[[redirects]]
+  from = "/s/:code"
+  to = "/.netlify/functions/short-resolve?code=:code"
   status = 200
 
 # SPA fallback for client-side routing.

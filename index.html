@@ -2,20 +2,54 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <!-- Icons & PWA -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#88bbff" />
+    <meta name="application-name" content="Adopt Me Values" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AM Values" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <title>Adopt Me Values — Free, ad-free pet & item value checker</title>
     <meta
       name="description"
-      content="Lightweight, ad-free Adopt Me value checker. Search pets and items, see aggregated RP values from multiple community sources, refreshed daily."
+      content="Free, ad-free Adopt Me value checker. Search pets and items, see aggregated RP values from multiple community sources, refreshed daily."
     />
+
+    <!-- Per-page social meta. The Netlify Edge Function at the project root
+         rewrites everything between these markers for known routes so
+         Discord / Twitter / iMessage previews show item-specific content.
+         The defaults below are what visitors see on routes we don't
+         specialise, and what scrapers see if the edge function ever fails. -->
+    <!-- META:DYNAMIC:START -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Adopt Me Values" />
+    <meta property="og:title" content="Adopt Me Values — Free, ad-free pet & item value checker" />
+    <meta property="og:description" content="Search pets and items, see aggregated RP values from multiple community sources, refreshed daily." />
+    <meta property="og:image" content="/og/default.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Adopt Me Values — Free, ad-free pet and item value checker" />
+    <meta property="og:url" content="/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Adopt Me Values" />
+    <meta name="twitter:description" content="Free, ad-free Adopt Me pet & item value checker." />
+    <meta name="twitter:image" content="/og/default.png" />
+    <!-- META:DYNAMIC:END -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <title>Adopt Me Value Checker</title>
   </head>
   <body class="text-slate-800 antialiased">
     <div id="root"></div>
