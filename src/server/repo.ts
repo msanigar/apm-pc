@@ -650,7 +650,10 @@ export async function loadHatchesIntoForEgg(eggId: string): Promise<{
     db
       .from("egg_hatch_pets")
       .select(
-        "rarity, pet_slug_snapshot, pet_display_name, source, fetched_at, pet:items(slug, name, image_path)"
+        // `egg_hatch_pets` has two FKs to `items` (egg_id, pet_id) so the
+        // embed name must be disambiguated; otherwise PostgREST throws
+        // PGRST300 and the whole hatch payload comes back empty.
+        "rarity, pet_slug_snapshot, pet_display_name, source, fetched_at, pet:items!pet_id(slug, name, image_path)"
       )
       .eq("egg_id", eggId),
   ]);
@@ -694,7 +697,8 @@ export async function loadHatchedFromForPet(petId: string): Promise<HatchedFromE
   const db = requireSupabaseAdmin();
   const { data, error } = await db
     .from("egg_hatch_pets")
-    .select("rarity, egg:items(slug, name)")
+    // Disambiguate the embed: `egg_hatch_pets` FKs to `items` twice.
+    .select("rarity, egg:items!egg_id(slug, name)")
     .eq("pet_id", petId);
   if (error) throw error;
   const out: HatchedFromEgg[] = [];
