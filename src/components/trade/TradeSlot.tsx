@@ -84,7 +84,7 @@ export function EmptyTradeSlot({ onAdd, disabled }: EmptyProps) {
     return (
       <div
         aria-hidden
-        className="grid h-full place-items-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/40 p-3 text-center"
+        className="flex h-full items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/40 p-3 text-center"
       >
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
           Max 18
@@ -96,12 +96,12 @@ export function EmptyTradeSlot({ onAdd, disabled }: EmptyProps) {
     <button
       type="button"
       onClick={onAdd}
-      className="group grid h-full w-full place-items-center rounded-2xl border-2 border-dashed border-brand-200 bg-white/60 p-3 text-center transition hover:-translate-y-0.5 hover:border-brand-400 hover:bg-white hover:shadow-md active:scale-[0.98]"
+      className="group flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-brand-200 bg-white/60 p-3 text-center transition hover:-translate-y-0.5 hover:border-brand-400 hover:bg-white hover:shadow-md active:scale-[0.98]"
     >
-      <span className="text-xl font-black text-brand-300 transition group-hover:text-brand-500">
+      <span className="text-xl font-black leading-none text-brand-300 transition group-hover:text-brand-500">
         +
       </span>
-      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 group-hover:text-brand-500">
+      <span className="text-[10px] font-extrabold uppercase leading-none tracking-wider text-slate-400 group-hover:text-brand-500">
         Add item
       </span>
     </button>
