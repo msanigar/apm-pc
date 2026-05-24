@@ -38,7 +38,7 @@ import {
 import {
   fetchFandomEggImages,
   FANDOM_SOURCE,
-} from "../src/server/sources/fandomEggs";
+} from "../src/server/sources/fandomWiki";
 import { getEnabledAdapters } from "../src/server/sources/index";
 import { buildAliasMap, normalizeSourceValues } from "../src/shared/normalize";
 import { MOCK_FIXTURES } from "../src/server/sources/mockFixtures";

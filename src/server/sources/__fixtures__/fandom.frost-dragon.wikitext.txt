@@ -1,0 +1,53 @@
+{{Pets
+|image = Frost Dragon Pet.png
+|caption = The Frost Dragon in a player's inventory.
+|rarity = Legendary
+|price = {{Robux|1,000}} (Off-sale)
+}}
+The '''Frost Dragon''' is a limited legendary [[Pets|pet]] in ''Adopt Me!'' that was released on December 20, 2019. Players could purchase it in the event shop for {{Robux|1,000}}. As the event has ended, it can now only be obtained through [[Trade System|trading]].
+
+== Appearance ==
+The Frost Dragon resembles the [[Shadow Dragon]] in appearance. It has the same mesh but with slight differences: retextured icy blue scales, pastel-blue neon eyes, bright light-blue smoke particle effects coming out of its mouth, two horns shaped like those of a ram, and spikes protruding from its back. It has sharp teeth and a forked tongue.
+
+Unlike the [[Shadow Dragon]], the Frost Dragon does not have an exposed ribcage. It has more spikes on its back than the [[Shadow Dragon]]. The wings are unchanged aside from the color. It also has a different head shape compared to the [[Shadow Dragon]].
+
+== Tricks ==
+Here are the tricks the Frost Dragon learns in order:
+*Newborn - Sit
+*Junior - Lay Down
+*Pre-Teen - Jump
+*Teen - Joy
+*Post-Teen- Dive
+*Full Grown - Frost Breath
+
+== Neon Appearance ==
+The [[Neon Pets|Neon]] Frost Dragon glows light blue on its wings, spikes, eyes, horns, feet, teeth, and tongue.
+
+== Mega Neon Appearance ==
+The [[Mega Neons|Mega Neon]] Frost Dragon glows in the same areas as the [[Neon Pets|Neon]] Frost Dragon, except those areas cycle through the colors of the rainbow.
+
+== Trivia ==
+*The original [[Mega Neons|Mega Neon]] Frost Dragon cycled through the colors blue and white. It was changed to where all of its glowing areas cycled through the colors of the rainbow, then later was changed again to where its eyes remained light blue. A final change was made to its eyes in a later update, which caused them to cycle through the rainbow again.
+
+== Gallery ==
+<gallery>
+FrostDragon.jpg|The Frost Dragon on ''Adopt Me!'''s [[Christmas Event (2019)]] thumbnail.
+Frost Dragon Gamepass AM.png|The Frost Dragon [[Gamepasses|Gamepass]] icon.
+Frost dragon (flurry).png|The Frost Dragon in-game.
+Neon Frost Dragon.png|The [[Neon Pets|Neon]] Frost Dragon.
+Mega Neon Frost Dragon.gif|The current [[Mega Neons|Mega Neon]] Frost Dragon.
+Mega frost old.gif|The original [[Mega Neons|Mega Neon]] Frost Dragon.
+Mega Neon Frost Dragon (gif).gif|An old version of the [[Mega Neons|Mega Neon]] Frost Dragon.
+</gallery>
+
+[[Category:Pets]]
+[[Category:Christmas Event (2019)]]
+[[Category:Legendary Pets]]
+[[Category:Limited]]
+[[Category:Gamepass Pet]]
+[[Category:Gamepass]]
+[[Category:Robux]]
+[[Category:Unavailable Pets]]
+[[Category:Legendary]]
+[[Category:Unavailable]]
+[[Category:Christmas]]

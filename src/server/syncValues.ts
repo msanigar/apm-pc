@@ -7,9 +7,11 @@ import type { RawSourceValue } from "../shared/normalize";
 import type { ImportRunStatus } from "../shared/types";
 import {
   diffDatasets,
+  selectRowsForDeltaPromotion,
   splitSafeAndSuspiciousRows,
   validateCandidateDataset,
 } from "../shared/validate";
+import type { CandidateDataset, CandidateRow } from "../shared/types";
 import { cacheImagesForRows } from "./images";
 import {
   completeImportRun,
@@ -18,6 +20,7 @@ import {
   promoteCandidateRows,
   recordSourceValues,
   replaceEggHatchData,
+  replaceItemContentsData,
   saveValidationIssues,
   storeSuspiciousCandidates,
   upsertItems,
@@ -25,7 +28,7 @@ import {
 } from "./repo";
 import { getEnabledAdapters, type SourceAdapter } from "./sources";
 import { MOCK_FIXTURES } from "./sources/mockFixtures";
-import { fetchFandomEggs } from "./sources/fandomEggs";
+import { fetchFandomEggs, fetchFandomGifts } from "./sources/fandomWiki";
 import { toSlug } from "../shared/slug";
 import { hasSupabaseAdmin } from "./supabase";
 
@@ -93,20 +96,50 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     const sourceResults = await Promise.allSettled(
       adapters.map(async (a) => {
         const values = await a.fetchValues();
-        return { adapter: a, values };
+        return { name: a.name, values };
       })
     );
 
     const raw: RawSourceValue[] = [];
     const successfulSourceNames = new Set<string>();
-    for (const result of sourceResults) {
+    const adapterStats: Array<{
+      name: string;
+      rows: number;
+      uniqueItems: number;
+      status: "ok" | "failed";
+    }> = [];
+
+    for (let i = 0; i < sourceResults.length; i++) {
+      const result = sourceResults[i];
+      const adapterName = adapters[i]?.name ?? "unknown";
       if (result.status === "fulfilled") {
-        successfulSourceNames.add(result.value.adapter.name);
-        for (const v of result.value.values) raw.push(v);
+        const { values } = result.value;
+        successfulSourceNames.add(adapterName);
+        for (const v of values) raw.push(v);
+        const uniqueItems = new Set(values.map((v) => v.sourceItemName)).size;
+        adapterStats.push({
+          name: adapterName,
+          rows: values.length,
+          uniqueItems,
+          status: "ok",
+        });
+        if (values.length === 0) {
+          console.warn(
+            `[sync] adapter "${adapterName}" returned 0 rows — upstream may be down or blocking us`
+          );
+        }
       } else {
-        console.warn("[sync] adapter failed:", result.reason);
+        console.warn(`[sync] adapter "${adapterName}" failed:`, result.reason);
+        adapterStats.push({
+          name: adapterName,
+          rows: 0,
+          uniqueItems: 0,
+          status: "failed",
+        });
       }
     }
+
+    console.info("[sync] adapter stats:", JSON.stringify(adapterStats));
 
     // Build the alias map from our catalog so sources that use shortened
     // names or alternate spellings collapse onto the same canonical slug.
@@ -127,14 +160,22 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     const validation = validateCandidateDataset(live, candidate, diff);
 
     if (dryRun) {
+      const deltaRows = validation.fatal
+        ? selectRowsForDeltaPromotion(candidate, diff, validation)
+        : [];
       console.info(
-        `[sync:dry-run] candidate=${candidate.rows.length} live=${live.rows.length} fatal=${validation.fatal} suspicious=${validation.suspiciousKeys.size}`
+        `[sync:dry-run] candidate=${candidate.rows.length} live=${live.rows.length} fatal=${validation.fatal} suspicious=${validation.suspiciousKeys.size} deltaRows=${deltaRows.length}`
       );
+      console.info("[sync:dry-run] adapter stats:", JSON.stringify(adapterStats));
       return {
-        status: validation.fatal ? "rejected" : "promoted",
+        status: validation.fatal
+          ? deltaRows.length > 0
+            ? "partial"
+            : "rejected"
+          : "promoted",
         sourceCount: successfulSourceNames.size,
         itemCount: candidate.rows.length,
-        promotedCount: validation.fatal ? 0 : candidate.rows.length,
+        promotedCount: validation.fatal ? deltaRows.length : candidate.rows.length,
         heldBackCount: validation.suspiciousKeys.size,
         suspiciousCount: validation.suspiciousKeys.size,
         missingCount: diff.liveOnly.length,
@@ -154,23 +195,57 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     await saveValidationIssues(importRun.id, validation.issues, slugToId);
 
     if (validation.fatal) {
+      const deltaRows = selectRowsForDeltaPromotion(
+        candidate,
+        diff,
+        validation
+      );
+      const { promotedCount, heldBackCount } = await promoteDeltaRows({
+        deltaRows,
+        candidate,
+        validation,
+        slugToId,
+        slugMeta,
+        now,
+      });
+
+      const deltaNote =
+        deltaRows.length > 0
+          ? `; Delta promote: ${promotedCount}/${deltaRows.length} rows (held ${heldBackCount})`
+          : "";
+      const adapterNote = `; Adapters: ${adapterStats
+        .map((a) => `${a.name}=${a.uniqueItems}`)
+        .join(", ")}`;
+      const notes = validation.summary + deltaNote + adapterNote;
+      const status = promotedCount > 0 ? "partial" : "rejected";
+
       await completeImportRun(importRun.id, {
-        status: "rejected",
+        status,
         sourceCount: successfulSourceNames.size,
         itemCount: candidate.rows.length,
+        promotedCount,
+        heldBackCount,
+        suspiciousCount: validation.suspiciousKeys.size,
         missingCount: diff.liveOnly.length,
-        notes: validation.summary,
+        notes,
       });
+
+      if (promotedCount > 0) {
+        console.info(
+          `[sync] fatal checks failed but promoted ${promotedCount} delta rows`
+        );
+      }
+
       return {
-        status: "rejected",
+        status,
         runId: importRun.id,
         sourceCount: successfulSourceNames.size,
         itemCount: candidate.rows.length,
-        promotedCount: 0,
-        heldBackCount: 0,
+        promotedCount,
+        heldBackCount,
         suspiciousCount: validation.suspiciousKeys.size,
         missingCount: diff.liveOnly.length,
-        notes: validation.summary,
+        notes,
         dryRun: false,
       };
     }
@@ -205,9 +280,14 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
       );
     }
 
-    // 6. Refresh egg hatch data from Fandom, gated by env. Failures here are
-    //    logged but never affect the main run's status — values are the
-    //    primary deliverable.
+    // 6. Refresh wiki-sourced relationship data, gated by env. Failures
+    //    here are logged but never affect the main run's status — values
+    //    are the primary deliverable.
+    //
+    //    NOTE: pet acquisition data (Cerberus, Bat Dragon, …) is NOT run
+    //    inside the daily sync because it walks ~1500 wiki pages and
+    //    would exceed scheduled-function time limits. Run it explicitly
+    //    via `npm run sync:wiki` (see `scripts/syncWiki.ts`).
     if (isFandomEggsEnabled()) {
       try {
         const payload = await fetchFandomEggs();
@@ -237,6 +317,40 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
         );
       } catch (err) {
         console.warn("[sync] fandom egg refresh failed:", err);
+      }
+    }
+
+    if (isFandomGiftsEnabled()) {
+      try {
+        const payload = await fetchFandomGifts();
+        const result = await replaceItemContentsData({
+          items: payload.items.map((i) => ({
+            containerSlug: i.giftSlug,
+            containedSlug: i.itemSlug,
+            containedDisplayName: i.itemDisplayName,
+            rarity: i.rarity,
+            categoryHint: i.categoryHint,
+            dropChancePct: i.chancePct,
+            source: i.source,
+            sourceRevisionId: i.sourceRevisionId,
+            fetchedAt: payload.fetchedAt,
+          })),
+          odds: payload.oddsByGift.map((o) => ({
+            eggSlug: o.eggSlug,
+            rarity: o.rarity,
+            probabilityPct: o.probabilityPct,
+            source: o.source,
+            sourceRevisionId: o.sourceRevisionId,
+            fetchedAt: payload.fetchedAt,
+          })),
+        });
+        console.info(
+          `[sync] fandom gifts: ${result.itemsCount} items, ${result.oddsCount} odds rows ` +
+            `(gifts=${payload.giftCount}, unmatched=${result.unmatchedContainerSlugs.length}, ` +
+            `unresolved=${result.unresolvedItemSlugs.length})`
+        );
+      } catch (err) {
+        console.warn("[sync] fandom gift refresh failed:", err);
       }
     }
 
@@ -419,6 +533,50 @@ function isFandomEggsEnabled(
 ): boolean {
   const v = env.ENABLE_FANDOM_EGGS?.trim().toLowerCase();
   return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
+function isFandomGiftsEnabled(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const v = env.ENABLE_FANDOM_GIFTS?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
+/**
+ * Promote a subset of candidate rows after dataset-wide validation failed.
+ * Used for incomplete upstream fetches so new catalog entries still land.
+ */
+async function promoteDeltaRows(input: {
+  deltaRows: CandidateRow[];
+  candidate: CandidateDataset;
+  validation: ReturnType<typeof validateCandidateDataset>;
+  slugToId: Map<string, string>;
+  slugMeta: Map<string, SlugMeta>;
+  now: Date;
+}): Promise<{ promotedCount: number; heldBackCount: number }> {
+  const { deltaRows, candidate, validation, slugToId, slugMeta, now } = input;
+  if (deltaRows.length === 0) {
+    return { promotedCount: 0, heldBackCount: 0 };
+  }
+
+  const deltaDataset: CandidateDataset = {
+    rows: deltaRows,
+    sourceNames: candidate.sourceNames,
+  };
+  const { safeRows, heldBackRows } = splitSafeAndSuspiciousRows(
+    deltaDataset,
+    validation
+  );
+  const promotedCount = await promoteCandidateRows(safeRows, slugToId, now);
+  const heldBackCount = await storeSuspiciousCandidates(
+    heldBackRows,
+    slugToId,
+    now
+  );
+  await recordSourceValues(deltaRows, slugToId, now);
+  const imageUrls = buildImageUrlMap(slugMeta);
+  await cacheImagesForRows(safeRows, imageUrls);
+  return { promotedCount, heldBackCount };
 }
 
 // Re-exports kept handy for callers

@@ -48,6 +48,9 @@ export const handler: Handler = async (event) => {
       values: result.values,
       hatchesInto: result.hatchesInto,
       hatchesFrom: result.hatchesFrom,
+      acquisitions: result.acquisitions,
+      contents: result.contents,
+      containedIn: result.containedIn,
     });
   } catch (err) {
     return serverError(err);

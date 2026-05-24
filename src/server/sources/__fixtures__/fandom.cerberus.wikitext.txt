@@ -1,0 +1,57 @@
+{{Pets
+|image = Cerberus HD.png
+|caption = The Cerberus in a player's inventory.
+|rarity = Legendary
+|price = {{Robux|500}}, {{Robux|400}} ([[Final Stop Shop]]).
+}}
+The '''Cerberus''' is a limited legendary [[Pets|pet]] in ''Adopt Me!'' that was released on October 28, 2020, as part of the [[Halloween Event (2020)]]. It cost {{Robux|500}} and was on sale for {{Robux|400}} in the [[Final Stop Shop]]. As it has left the game on May 18, 2023, it can now only be obtained through [[Trade System|trading]].
+
+The Cerberus could also have been purchased from the Shop icon on the top right of a player's screen and was previously located in the [[Pet Shop]].
+
+== Appearance ==
+The Cerberus is a three-headed dark gray hound. Parts of its heads, along with its eyes, ears, noses, and paws, are colored black, with the exception of a light gray underbelly. Each of the three heads have a pink tongue sticking out, two ears, two black eyes, a black nose, and gray head fur.    
+
+== Tricks ==
+Listed below are the tricks the Cerberus learns in order:
+*Newborn - Sit
+*Junior - Lay Down
+*Pre-Teen - Beg
+*Teen - Jump
+*Post-Teen - Trick 1
+*Full Grown - Trick 2
+
+== Neon Appearance ==
+The [[Neon Pets|Neon]] Cerberus glows bright lavender on the insides of its ears, the fur on its chest, and its tail.
+
+== Mega Neon Appearance ==
+The [[Mega Neons|Mega Neon]] Cerberus glows in the same areas as the [[Neon Pets|Neon]] Cerberus, except those areas cycle through the colors of the rainbow.
+
+== Trivia ==
+*The ''Adopt Me!'' Cerberus is modelled after the mythological dog [[wikipedia:Cerberus|Cerberus]].
+*Despite being introduced during the [[Halloween Event (2020)]], it remained in ''Adopt Me!'' as a [[Gamepasses|gamepass]] [[Pets|pet]] and was moved to the [[Pet Shop]].
+
+== Gallery ==
+<gallery>
+Cerberus video.png|The teaser image of the Cerberus.
+Cerberus Gamepass Icon.png|The Cerberus [[Gamepasses|gamepass]] icon.
+The Cerberus in-game..png|The Cerberus in-game.
+Neon Cerberus.png|The [[Neon Pets|Neon]] Cerberus.
+Mega Neon Cerberus.jpg|The [[Mega Neons|Mega Neon]] Cerberus.
+Concept Art Cerberus.jpg|Concept art of the Cerberus.
+Cerberus on display in the Pet Shop.jpg|The Cerberus on display in the [[Pet Shop]].
+Cerberus in Final Stop Shop.jpg|The Cerberus on display in the [[Final Stop Shop]].
+Halloween Event 2020.jpg|The Cerberus on ''Adopt Me!'''s thumbnail during the [[Halloween Event (2020)]].
+</gallery>
+
+[[Category:Pets]]
+[[Category:Halloween Event (2020)]]
+[[Category:Legendary Pets]]
+[[Category:Legendary]]
+[[Category:Robux]]
+[[Category:Halloween]]
+[[Category:Pet Shop]]
+[[Category:Gamepass Pet]]
+[[Category:Gamepass]]
+[[Category:Limited]]
+[[Category:Unavailable]]
+[[Category:Unavailable Pets]]

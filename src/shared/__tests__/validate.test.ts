@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   diffDatasets,
+  isIncompleteFetchFatal,
   keyOf,
+  selectRowsForDeltaPromotion,
   splitSafeAndSuspiciousRows,
   validateCandidateDataset,
 } from "../validate";
@@ -166,6 +168,52 @@ describe("validateCandidateDataset", () => {
     const v = validateCandidateDataset(live, cand, diff);
     expect(v.fatal).toBe(false);
     expect(v.suspiciousKeys.size).toBe(0);
+  });
+});
+
+describe("selectRowsForDeltaPromotion", () => {
+  it("promotes the full candidate when fatal is due to incomplete fetch", () => {
+    const live = makeLive(
+      Array.from({ length: 100 }, (_, i) => liveRow(`pet-${i}`, "regular", 100))
+    );
+    const cand = makeCand(
+      Array.from({ length: 7 }, (_, i) =>
+        candRow(`pet-${i}`, "regular", [100, 100, 100])
+      )
+    );
+    const diff = diffDatasets(live, cand);
+    const v = validateCandidateDataset(live, cand, diff);
+    expect(v.fatal).toBe(true);
+    expect(isIncompleteFetchFatal(v)).toBe(true);
+    expect(selectRowsForDeltaPromotion(cand, diff, v)).toEqual(cand.rows);
+  });
+
+  it("promotes only candidate-only rows for other fatal reasons", () => {
+    const live = makeLive([liveRow("dog", "regular", 100)]);
+    const cand = makeCand([
+      candRow("dog", "regular", [100, 100, 100]),
+      candRow("brand-new", "regular", [200, 200, 200]),
+    ]);
+    const diff = diffDatasets(live, cand);
+    const v = validateCandidateDataset(live, cand, diff);
+    expect(v.fatal).toBe(false);
+    // Simulate a non-coverage fatal by using empty live — not fatal.
+    // Force a synthetic validation object for the branch we care about.
+    const fatalMedian = {
+      ...v,
+      fatal: true,
+      issues: [
+        {
+          issueType: "dataset_median_shift" as const,
+          severity: "fatal" as const,
+          message: "shift",
+        },
+      ],
+    };
+    expect(isIncompleteFetchFatal(fatalMedian)).toBe(false);
+    expect(selectRowsForDeltaPromotion(cand, diff, fatalMedian).map((r) => r.itemSlug)).toEqual([
+      "brand-new",
+    ]);
   });
 });
 

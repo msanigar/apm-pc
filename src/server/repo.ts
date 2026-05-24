@@ -1,6 +1,8 @@
 import type {
+  AcquisitionKind,
   AggregatedVariantValue,
   CandidateRow,
+  ContainedIn,
   EggHatchOdds,
   EggHatchPet,
   HatchedFromEgg,
@@ -9,8 +11,10 @@ import type {
   ImportRunSummary,
   Item,
   ItemCategory,
+  ItemContent,
   LiveDataset,
   LiveRow,
+  PetAcquisition,
   SearchIndexItem,
   Variant,
 } from "../shared/types";
@@ -371,6 +375,14 @@ export async function loadItemBySlug(slug: string): Promise<{
     source: string | null;
   };
   hatchesFrom?: HatchedFromEgg[];
+  acquisitions?: PetAcquisition[];
+  contents?: {
+    items: ItemContent[];
+    odds: EggHatchOdds[];
+    fetchedAt: string | null;
+    source: string | null;
+  };
+  containedIn?: ContainedIn[];
 } | null> {
   const db = requireSupabaseAdmin();
   const { data: item, error } = await db
@@ -388,24 +400,58 @@ export async function loadItemBySlug(slug: string): Promise<{
     .eq("item_id", item.id);
   if (aggErr) throw aggErr;
 
-  // Side-channel: pull hatch data when category warrants it. Each branch
-  // catches its own errors so a hatch-table issue never breaks the value
-  // page that worked perfectly fine before this feature shipped.
+  const category = (item as any).category as ItemCategory;
+  const itemId = item.id as string;
+
+  // Side-channel: pull category-specific relations. Each branch catches
+  // its own errors so a relation-table issue never breaks the value page
+  // that worked perfectly fine before this feature shipped.
   let hatchesInto: Awaited<ReturnType<typeof loadHatchesIntoForEgg>> | undefined;
   let hatchesFrom: HatchedFromEgg[] | undefined;
+  let acquisitions: PetAcquisition[] | undefined;
+  let contents:
+    | Awaited<ReturnType<typeof loadContentsForContainer>>
+    | undefined;
+  let containedIn: ContainedIn[] | undefined;
+
   try {
-    if ((item as any).category === "egg") {
-      hatchesInto = await loadHatchesIntoForEgg(item.id as string);
-      // Don't bother sending an empty payload over the wire.
+    if (category === "egg") {
+      hatchesInto = await loadHatchesIntoForEgg(itemId);
       if (hatchesInto.odds.length === 0 && hatchesInto.pets.length === 0) {
         hatchesInto = undefined;
       }
-    } else if ((item as any).category === "pet") {
-      const eggs = await loadHatchedFromForPet(item.id as string);
+    } else if (category === "pet") {
+      const eggs = await loadHatchedFromForPet(itemId);
       if (eggs.length > 0) hatchesFrom = eggs;
+      const acqs = await loadAcquisitionsForPet(itemId);
+      if (acqs.length > 0) acquisitions = acqs;
     }
   } catch (err) {
     console.warn(`[repo] hatch lookup for ${slug} failed:`, err);
+  }
+
+  // Container check: relevant for items that ARE containers. We can't
+  // tell from category alone (some boxes may be misclassified), so we
+  // always attempt the lookup and only attach when non-empty.
+  try {
+    if (category === "gift" || category === "other") {
+      const c = await loadContentsForContainer(itemId);
+      if (c.items.length > 0) contents = c;
+    }
+  } catch (err) {
+    console.warn(`[repo] contents lookup for ${slug} failed:`, err);
+  }
+
+  // Reverse "contained in" — useful for any item that might appear inside
+  // a box (RGB Sword on the RGB-Sword page shows "Obtained from RGB
+  // Reward Box"). Skip for containers themselves to avoid duplication.
+  try {
+    if (category !== "gift") {
+      const back = await loadContainedInForItem(itemId);
+      if (back.length > 0) containedIn = back;
+    }
+  } catch (err) {
+    console.warn(`[repo] containedIn lookup for ${slug} failed:`, err);
   }
 
   return {
@@ -413,6 +459,9 @@ export async function loadItemBySlug(slug: string): Promise<{
     values: (aggs ?? []).map(mapAggregated),
     hatchesInto,
     hatchesFrom,
+    acquisitions,
+    contents,
+    containedIn,
   };
 }
 
@@ -733,6 +782,342 @@ function pickNewestTimestamp(stamps: Array<string | null | undefined>): string |
     if (best == null || s > best) best = s;
   }
   return best;
+}
+
+/* ─────────────────── Pet acquisitions (events, Robux, …) ─────────────────── */
+
+export type PetAcquisitionUpsert = {
+  petSlug: string;
+  kind: AcquisitionKind;
+  eventName: string | null;
+  eventYear: number | null;
+  currency: string | null;
+  cost: number | null;
+  retired: boolean;
+  releasedAt: string | null;
+  notes: string | null;
+  source: string;
+  sourceRevisionId: string | null;
+  fetchedAt: string;
+};
+
+export type ReplaceAcquisitionsResult = {
+  inserted: number;
+  unresolvedPetSlugs: string[];
+};
+
+/**
+ * Same pattern as `replaceEggHatchData`: collect every pet we got rows
+ * for, delete existing rows for that (pet, source) pair, then insert.
+ */
+export async function replacePetAcquisitionsData(input: {
+  rows: PetAcquisitionUpsert[];
+}): Promise<ReplaceAcquisitionsResult> {
+  const db = requireSupabaseAdmin();
+  const slugToId = await loadAllItemSlugIds();
+
+  const unresolvedPetSlugs = new Set<string>();
+  const affectedPetIdsBySource = new Map<string, Set<string>>();
+  function noteAffected(petId: string, source: string) {
+    let set = affectedPetIdsBySource.get(source);
+    if (!set) {
+      set = new Set();
+      affectedPetIdsBySource.set(source, set);
+    }
+    set.add(petId);
+  }
+
+  const payload: Record<string, unknown>[] = [];
+  for (const row of input.rows) {
+    const petId = slugToId.get(row.petSlug);
+    if (!petId) {
+      unresolvedPetSlugs.add(row.petSlug);
+      continue;
+    }
+    noteAffected(petId, row.source);
+    payload.push({
+      pet_id: petId,
+      kind: row.kind,
+      event_name: row.eventName,
+      event_year: row.eventYear,
+      currency: row.currency,
+      cost: row.cost,
+      retired: row.retired,
+      released_at: row.releasedAt,
+      notes: row.notes,
+      source: row.source,
+      source_revision_id: row.sourceRevisionId,
+      fetched_at: row.fetchedAt,
+    });
+  }
+
+  // Replace pattern: delete existing rows for each affected (pet, source).
+  for (const [source, petIds] of affectedPetIdsBySource) {
+    const ids = Array.from(petIds);
+    for (let i = 0; i < ids.length; i += 300) {
+      const chunk = ids.slice(i, i + 300);
+      const del = await db
+        .from("pet_acquisitions")
+        .delete()
+        .eq("source", source)
+        .in("pet_id", chunk);
+      if (del.error) throw del.error;
+    }
+  }
+
+  const inserted = await bulkInsert("pet_acquisitions", payload);
+  return {
+    inserted,
+    unresolvedPetSlugs: Array.from(unresolvedPetSlugs),
+  };
+}
+
+export async function loadAcquisitionsForPet(
+  petId: string
+): Promise<PetAcquisition[]> {
+  const db = requireSupabaseAdmin();
+  const { data, error } = await db
+    .from("pet_acquisitions")
+    .select(
+      "kind, event_name, event_year, currency, cost, retired, released_at, notes, source"
+    )
+    .eq("pet_id", petId);
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    kind: row.kind as AcquisitionKind,
+    eventName: (row.event_name as string | null) ?? null,
+    eventYear: row.event_year != null ? Number(row.event_year) : null,
+    currency: (row.currency as string | null) ?? null,
+    cost: row.cost != null ? Number(row.cost) : null,
+    retired: Boolean(row.retired),
+    releasedAt: (row.released_at as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    source: row.source as string,
+  }));
+}
+
+/* ─────────────────── Box / gift contents ─────────────────── */
+
+export type ItemContentUpsert = {
+  containerSlug: string;
+  /** Resolved-or-not item slug from the wiki side of the relation. */
+  containedSlug: string;
+  containedDisplayName: string;
+  rarity: HatchRarity | null;
+  categoryHint: string | null;
+  dropChancePct: number | null;
+  source: string;
+  sourceRevisionId: string | null;
+  fetchedAt: string;
+};
+
+export type ReplaceContentsResult = {
+  itemsCount: number;
+  oddsCount: number;
+  unmatchedContainerSlugs: string[];
+  unresolvedItemSlugs: string[];
+};
+
+/**
+ * Replace the contents listing for every container the adapter just
+ * emitted. Mirrors `replaceEggHatchData` exactly:
+ *   - DELETE existing rows from the same `source` for every affected
+ *     container,
+ *   - INSERT the fresh roster.
+ *
+ * Per-rarity odds from the same source live in `egg_hatch_odds` (we
+ * reuse the table — it's the same shape). `containerSlug` becomes the
+ * `egg_id` from the odds caller's perspective.
+ */
+export async function replaceItemContentsData(input: {
+  items: ItemContentUpsert[];
+  /** Optional per-rarity odds; reuses the egg_hatch_odds table. */
+  odds: EggHatchOddsUpsert[];
+}): Promise<ReplaceContentsResult> {
+  const db = requireSupabaseAdmin();
+  const slugToId = await loadAllItemSlugIds();
+
+  const unmatchedContainerSlugs = new Set<string>();
+  const unresolvedItemSlugs = new Set<string>();
+
+  const affectedContainerIdsBySource = new Map<string, Set<string>>();
+  function noteAffected(containerId: string, source: string) {
+    let set = affectedContainerIdsBySource.get(source);
+    if (!set) {
+      set = new Set();
+      affectedContainerIdsBySource.set(source, set);
+    }
+    set.add(containerId);
+  }
+
+  const itemsPayload: Record<string, unknown>[] = [];
+  for (const row of input.items) {
+    const containerId = slugToId.get(row.containerSlug);
+    if (!containerId) {
+      unmatchedContainerSlugs.add(row.containerSlug);
+      continue;
+    }
+    const containedId = slugToId.get(row.containedSlug) ?? null;
+    if (containedId == null) unresolvedItemSlugs.add(row.containedSlug);
+    noteAffected(containerId, row.source);
+    itemsPayload.push({
+      container_id: containerId,
+      contained_item_id: containedId,
+      contained_slug_snapshot: containedId == null ? row.containedSlug : null,
+      contained_display_name: row.containedDisplayName,
+      rarity: row.rarity,
+      category_hint: row.categoryHint,
+      drop_chance: row.dropChancePct,
+      quantity: 1,
+      source: row.source,
+      source_revision_id: row.sourceRevisionId,
+      fetched_at: row.fetchedAt,
+    });
+  }
+
+  // Odds — also stored under the container's id (the table is shared
+  // with egg odds; `egg_id` is the abstract "parent container" id).
+  const oddsPayload: Record<string, unknown>[] = [];
+  for (const row of input.odds) {
+    const containerId = slugToId.get(row.eggSlug);
+    if (!containerId) {
+      unmatchedContainerSlugs.add(row.eggSlug);
+      continue;
+    }
+    noteAffected(containerId, row.source);
+    oddsPayload.push({
+      egg_id: containerId,
+      rarity: row.rarity,
+      probability_pct: row.probabilityPct,
+      source: row.source,
+      source_revision_id: row.sourceRevisionId,
+      fetched_at: row.fetchedAt,
+    });
+  }
+
+  // Delete existing rows for every (container, source) pair we're
+  // about to refresh.
+  for (const [source, containerIds] of affectedContainerIdsBySource) {
+    const ids = Array.from(containerIds);
+    for (let i = 0; i < ids.length; i += 300) {
+      const chunk = ids.slice(i, i + 300);
+      const itemsDel = await db
+        .from("item_contents")
+        .delete()
+        .eq("source", source)
+        .in("container_id", chunk);
+      if (itemsDel.error) throw itemsDel.error;
+      const oddsDel = await db
+        .from("egg_hatch_odds")
+        .delete()
+        .eq("source", source)
+        .in("egg_id", chunk);
+      if (oddsDel.error) throw oddsDel.error;
+    }
+  }
+
+  const itemsCount = await bulkInsert("item_contents", itemsPayload);
+  const oddsCount = await bulkInsert("egg_hatch_odds", oddsPayload);
+
+  return {
+    itemsCount,
+    oddsCount,
+    unmatchedContainerSlugs: Array.from(unmatchedContainerSlugs),
+    unresolvedItemSlugs: Array.from(unresolvedItemSlugs),
+  };
+}
+
+export async function loadContentsForContainer(
+  containerId: string
+): Promise<{
+  items: ItemContent[];
+  odds: EggHatchOdds[];
+  fetchedAt: string | null;
+  source: string | null;
+}> {
+  const db = requireSupabaseAdmin();
+
+  const [itemsRes, oddsRes] = await Promise.all([
+    db
+      .from("item_contents")
+      .select(
+        // FK disambiguation: `item_contents` references items twice
+        // (container_id, contained_item_id). PostgREST needs the hint.
+        "rarity, category_hint, drop_chance, quantity, contained_slug_snapshot, contained_display_name, source, fetched_at, contained:items!contained_item_id(slug, name, image_path)"
+      )
+      .eq("container_id", containerId),
+    db
+      .from("egg_hatch_odds")
+      .select("rarity, probability_pct, source, fetched_at")
+      .eq("egg_id", containerId),
+  ]);
+  if (itemsRes.error) throw itemsRes.error;
+  if (oddsRes.error) throw oddsRes.error;
+
+  const items: ItemContent[] = (itemsRes.data ?? []).map((row: any) => {
+    const linked = row.contained ?? null;
+    return {
+      containedSlug: (linked?.slug as string) ?? null,
+      containedName:
+        (linked?.name as string) ??
+        (row.contained_display_name as string | null) ??
+        (row.contained_slug_snapshot as string | null) ??
+        "Unknown item",
+      rarity: (row.rarity as HatchRarity | null) ?? null,
+      categoryHint: (row.category_hint as string | null) ?? null,
+      dropChancePct:
+        row.drop_chance != null ? Number(row.drop_chance) : null,
+      quantity: Number(row.quantity ?? 1),
+      imageUrl: publicImageUrl(linked?.image_path ?? null),
+    };
+  });
+
+  const odds: EggHatchOdds[] = (oddsRes.data ?? []).map((row: any) => ({
+    rarity: row.rarity as HatchRarity,
+    probabilityPct:
+      row.probability_pct != null ? Number(row.probability_pct) : null,
+  }));
+
+  const fetchedAt = pickNewestTimestamp([
+    ...(itemsRes.data ?? []).map((r: any) => r.fetched_at),
+    ...(oddsRes.data ?? []).map((r: any) => r.fetched_at),
+  ]);
+  const source =
+    (itemsRes.data?.[0] as any)?.source ??
+    (oddsRes.data?.[0] as any)?.source ??
+    null;
+
+  return { items, odds: orderOddsByTier(odds), fetchedAt, source };
+}
+
+/**
+ * Reverse lookup: every container that lists THIS item as part of its
+ * contents. Used to show "Contained in {RGB Reward Box}" on item pages.
+ */
+export async function loadContainedInForItem(
+  itemId: string
+): Promise<ContainedIn[]> {
+  const db = requireSupabaseAdmin();
+  const { data, error } = await db
+    .from("item_contents")
+    .select(
+      "drop_chance, container:items!container_id(slug, name, image_path)"
+    )
+    .eq("contained_item_id", itemId);
+  if (error) throw error;
+  const out: ContainedIn[] = [];
+  for (const row of (data ?? []) as any[]) {
+    if (!row.container?.slug) continue;
+    out.push({
+      containerSlug: row.container.slug as string,
+      containerName:
+        (row.container.name as string) ?? (row.container.slug as string),
+      containerImageUrl: publicImageUrl(row.container.image_path ?? null),
+      dropChancePct:
+        row.drop_chance != null ? Number(row.drop_chance) : null,
+    });
+  }
+  return out.sort((a, b) => a.containerName.localeCompare(b.containerName));
 }
 
 export function buildMockSearchIndex(): SearchIndexItem[] {

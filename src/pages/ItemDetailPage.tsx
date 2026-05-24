@@ -5,6 +5,9 @@ import { fetchItem } from "@/lib/api";
 import { VariantValueTable } from "@/components/VariantValueTable";
 import { EggHatchSection } from "@/components/EggHatchSection";
 import { HatchedFromSection } from "@/components/HatchedFromSection";
+import { EventAcquisitionSection } from "@/components/EventAcquisitionSection";
+import { ContentsSection } from "@/components/ContentsSection";
+import { ContainedInSection } from "@/components/ContainedInSection";
 import { formatRelativeTime } from "@/lib/format";
 import { getCategoryTheme, getRarityTheme } from "@/lib/theme";
 import { ArrowLeftIcon, PawIcon, SparkleIcon } from "@/components/icons";
@@ -129,10 +132,32 @@ export function ItemDetailPage() {
         />
       )}
 
+      {data.contents && (
+        <ContentsSection
+          items={data.contents.items}
+          odds={data.contents.odds ?? []}
+          fetchedAt={data.contents.fetchedAt}
+          source={data.contents.source}
+        />
+      )}
+
       <VariantValueTable category={data.item.category} values={data.values} />
 
-      {data.hatchesFrom && data.hatchesFrom.length > 0 && (
-        <HatchedFromSection eggs={data.hatchesFrom} />
+      {/* Grouped "how do I get this pet" panels — eggs on the left,
+          limited / event releases on the right. */}
+      {(data.hatchesFrom?.length || data.acquisitions?.length) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {data.hatchesFrom && data.hatchesFrom.length > 0 && (
+            <HatchedFromSection eggs={data.hatchesFrom} />
+          )}
+          {data.acquisitions && data.acquisitions.length > 0 && (
+            <EventAcquisitionSection acquisitions={data.acquisitions} />
+          )}
+        </div>
+      )}
+
+      {data.containedIn && data.containedIn.length > 0 && (
+        <ContainedInSection containers={data.containedIn} />
       )}
 
       {data.item.aliases.length > 0 && (

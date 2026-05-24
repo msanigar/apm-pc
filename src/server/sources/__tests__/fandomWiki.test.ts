@@ -7,19 +7,29 @@ import {
   pageTitleToSlug,
   parseEggsInfobox,
   parseEggWikitext,
+  parseObtainableItemsTable,
   parseObtainablePetsTable,
+  parsePetAcquisitionFromWikitext,
   parsePetLink,
-} from "../fandomEggs";
+} from "../fandomWiki";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const MYTHIC = readFileSync(
-  path.join(HERE, "..", "__fixtures__", "fandom.mythic-egg.wikitext.txt"),
-  "utf8"
-);
-const AZTEC = readFileSync(
-  path.join(HERE, "..", "__fixtures__", "fandom.aztec-egg.wikitext.txt"),
-  "utf8"
-);
+
+function fixture(name: string): string {
+  return readFileSync(
+    path.join(HERE, "..", "__fixtures__", `fandom.${name}.wikitext.txt`),
+    "utf8"
+  );
+}
+
+const MYTHIC = fixture("mythic-egg");
+const AZTEC = fixture("aztec-egg");
+const CERBERUS = fixture("cerberus");
+const BAT_DRAGON = fixture("bat-dragon");
+const FROST_DRAGON = fixture("frost-dragon");
+const ROBIN = fixture("robin");
+const SASQUATCH = fixture("sasquatch");
+const RGB_REWARD_BOX = fixture("rgb-reward-box");
 
 describe("pageTitleToSlug", () => {
   it("slugifies plain titles", () => {
@@ -326,5 +336,104 @@ describe("parseEggWikitext (edge cases)", () => {
     const result = parseEggWikitext("{{Eggs|common=N/A|legendary=}}");
     const common = result.odds.find((o) => o.rarity === "common");
     expect(common?.probabilityPct).toBeNull();
+  });
+});
+
+describe("parseObtainableItemsTable (gift / reward-box content)", () => {
+  it("parses RGB Reward Box contents with the Item|Image|Rarity|Category|Chance shape", () => {
+    const rows = parseObtainableItemsTable(RGB_REWARD_BOX);
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+
+    const collar = rows.find((r) => r.itemCell.includes("RGB Collar"));
+    expect(collar).toBeDefined();
+    expect(collar?.rarityCell.toLowerCase()).toBe("common");
+    // The Category column is a wiki link to "Category:Pet Accessories" with
+    // display "Pet Accessory". `categoryCell` is the raw cell text, so
+    // existence and link presence is what we assert here; downstream code
+    // strips the link.
+    expect(collar?.categoryCell).toMatch(/Pet Accessor/i);
+  });
+
+  it("returns nothing for pages without an obtainable-items table", () => {
+    const minimal =
+      "{{Eggs|common=50%|legendary=50%}}\n\nThe Pizza Box is a snack.";
+    expect(parseObtainableItemsTable(minimal)).toEqual([]);
+  });
+});
+
+describe("parsePetAcquisitionFromWikitext (lede prose extraction)", () => {
+  it("extracts a Robux purchase + event + retired flag (Cerberus)", () => {
+    const result = parsePetAcquisitionFromWikitext(CERBERUS);
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("robux");
+    expect(result?.currency).toBe("robux");
+    expect(result?.cost).toBe(500);
+    expect(result?.eventName).toBe("Halloween Event");
+    expect(result?.eventYear).toBe(2020);
+    expect(result?.releasedAt).toBe("2020-10-28");
+    expect(result?.retired).toBe(true);
+  });
+
+  it("extracts a Candy purchase + event + retired flag (Bat Dragon)", () => {
+    const result = parsePetAcquisitionFromWikitext(BAT_DRAGON);
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("paid");
+    expect(result?.currency).toBe("candy");
+    expect(result?.cost).toBe(180000);
+    expect(result?.eventName).toBe("Halloween Event");
+    expect(result?.eventYear).toBe(2019);
+    expect(result?.retired).toBe(true);
+  });
+
+  it("extracts a Robux purchase + retired flag, even without an explicit event link (Frost Dragon)", () => {
+    const result = parsePetAcquisitionFromWikitext(FROST_DRAGON);
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("robux");
+    expect(result?.currency).toBe("robux");
+    expect(result?.cost).toBe(1000);
+    expect(result?.retired).toBe(true);
+    expect(result?.releasedAt).toBe("2019-12-20");
+  });
+
+  it("extracts an event acquisition for egg-hatched event pets (Robin from Christmas)", () => {
+    const result = parsePetAcquisitionFromWikitext(ROBIN);
+    expect(result).not.toBeNull();
+    expect(result?.kind).toBe("event");
+    expect(result?.eventName).toBe("Christmas Event");
+    expect(result?.eventYear).toBe(2019);
+    expect(result?.retired).toBe(true);
+    expect(result?.releasedAt).toBe("2019-12-14");
+    // Robin's only currency reference (`{{Gingerbread|1,440}}`) lives
+    // inside the {{Pets}} infobox and refers to the Christmas Egg, not
+    // the pet — our parser intentionally strips the infobox before
+    // looking for prose-level currency templates.
+    expect(result?.currency).toBeNull();
+  });
+
+  it("skips egg-hatch-only pages with no extra event/Robux signal", () => {
+    // Construct a minimal lede that ONLY mentions egg hatching, no event,
+    // no currency, no "limited"/"retired" wording.
+    const eggOnly = `
+The '''Cat''' is a [[Pets|pet]] in ''Adopt Me!''. It can be obtained by hatching a [[Cracked Egg]].
+    `;
+    expect(parsePetAcquisitionFromWikitext(eggOnly)).toBeNull();
+  });
+
+  it("returns null when the page has no usable acquisition signal at all", () => {
+    expect(parsePetAcquisitionFromWikitext("")).toBeNull();
+    expect(
+      parsePetAcquisitionFromWikitext(
+        "Just some plain prose about a pet's appearance."
+      )
+    ).toBeNull();
+  });
+
+  it("returns a non-null result with a Bucks cost for Sasquatch (Mythic Egg event pet)", () => {
+    const result = parsePetAcquisitionFromWikitext(SASQUATCH);
+    // Sasquatch lede: hatches from Mythic Egg, retired, etc. — it should
+    // return an acquisition row because of the "limited" + retirement
+    // language, even though the primary acquisition is egg-hatching.
+    expect(result).not.toBeNull();
+    expect(result?.retired).toBe(true);
   });
 });

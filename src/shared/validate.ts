@@ -322,6 +322,42 @@ export function validateCandidateDataset(
 }
 
 /**
+ * True when the import was rejected because the candidate only covers a
+ * small slice of the live catalog — usually a primary source (AMVerse /
+ * Elvebredd) failed or returned an empty page.
+ */
+export function isIncompleteFetchFatal(
+  validation: ValidationSummary
+): boolean {
+  return validation.issues.some(
+    (i) => i.severity === "fatal" && i.issueType === "too_few_items"
+  );
+}
+
+/**
+ * Rows we still promote when the dataset-wide checks fail.
+ *
+ *   • Incomplete fetch (`too_few_items`): promote the entire candidate so
+ *     whatever did arrive (new pets, partial source values) lands in the
+ *     catalog. Per-item suspicious flags still apply via
+ *     `splitSafeAndSuspiciousRows`.
+ *
+ *   • Other fatals (median shift, too many movers): only promote rows that
+ *     are genuinely new to the live dataset (`candidateOnly`). We must not
+ *     overwrite thousands of live values from a broken partial import.
+ */
+export function selectRowsForDeltaPromotion(
+  candidate: CandidateDataset,
+  diff: DatasetDiff,
+  validation: ValidationSummary
+): CandidateRow[] {
+  if (isIncompleteFetchFatal(validation)) {
+    return candidate.rows;
+  }
+  return diff.candidateOnly;
+}
+
+/**
  * Split a candidate dataset into rows that are safe to promote vs rows that
  * should be held back because of the validation step.
  */

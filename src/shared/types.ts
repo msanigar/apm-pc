@@ -117,6 +117,52 @@ export type HatchedFromEgg = {
   rarity: HatchRarity;
 };
 
+/**
+ * How a pet entered the game outside of egg hatching. The kinds mirror
+ * the `pet_acquisitions.kind` enum in Supabase.
+ */
+export type AcquisitionKind =
+  | "event"
+  | "robux"
+  | "paid"
+  | "task"
+  | "gift"
+  | "other";
+
+export type PetAcquisition = {
+  kind: AcquisitionKind;
+  eventName?: string | null;
+  eventYear?: number | null;
+  currency?: string | null;
+  cost?: number | null;
+  retired: boolean;
+  releasedAt?: string | null;
+  notes?: string | null;
+  source: string;
+};
+
+/**
+ * One row in a container item's contents (RGB Reward Box → RGB Sword, etc.)
+ */
+export type ItemContent = {
+  containedSlug: string | null;
+  containedName: string;
+  rarity?: HatchRarity | null;
+  /** Wiki-tagged subcategory ("pet", "toy", "accessory" …). Best-effort. */
+  categoryHint?: string | null;
+  dropChancePct?: number | null;
+  quantity: number;
+  imageUrl?: string | null;
+};
+
+/** Reverse lookup: this item is contained in these other items. */
+export type ContainedIn = {
+  containerSlug: string;
+  containerName: string;
+  containerImageUrl?: string | null;
+  dropChancePct?: number | null;
+};
+
 export type ItemDetailResponse = {
   item: Item;
   imageUrl?: string | null;
@@ -132,6 +178,19 @@ export type ItemDetailResponse = {
   };
   /** Populated when `item.category === 'pet'`. */
   hatchesFrom?: HatchedFromEgg[];
+  /** Populated when `item.category === 'pet'` and the pet has non-egg
+   * acquisition records (event releases, Robux purchases, etc.). */
+  acquisitions?: PetAcquisition[];
+  /** Populated when the item itself is a container — boxes, gifts, etc. */
+  contents?: {
+    items: ItemContent[];
+    odds?: EggHatchOdds[];
+    fetchedAt?: string | null;
+    source?: string | null;
+  };
+  /** Reverse lookup: items that contain THIS item (e.g. RGB Sword shows
+   * "Obtained from RGB Reward Box"). */
+  containedIn?: ContainedIn[];
 };
 
 /**

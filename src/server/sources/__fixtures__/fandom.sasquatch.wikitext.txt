@@ -1,0 +1,47 @@
+{{Ambiguous|[[Tree Sasquatch]]}}
+{{Pets
+|image = SasquatchIcon.png
+|caption = The Sasquatch in a player's inventory.
+|rarity = Rare
+|price = {{Bucks|750}} ([[Mythic Egg]])
+}}
+The '''Sasquatch''' is a limited rare [[Pets|pet]] in ''Adopt Me!'' that was released on August 19, 2021. It can be obtained by hatching a [[Mythic Egg]]. Since the [[Mythic Egg]] left the game on March 17, 2022, the Sasquatch is now only obtainable through [[Trade System|trading]] or by hatching any remaining [[Mythic Egg]]s.
+
+Players have a 34% chance of hatching a rare [[Pets|pet]] from the [[Mythic Egg]], but only a 17% chance of hatching the Sasquatch.
+
+== Appearance ==
+The Sasquatch has a spherical brown body with layers of brown fur, with a beige underside. It features two beige arms with three dark brown claws, and two large, dark brown feet. It has a beige head with two beady black eyes, a brown nose, and dark brown hair that covers most of its head, as well as a tuft of brown hair on top.
+
+== Tricks ==
+Listed below are the tricks the Sasquatch learns in order:
+*Newborn - Sit
+*Junior - Joyful
+*Pre-Teen - Beg
+*Teen - Jump
+*Post-Teen - Trick 1
+*Full Grown - Trick 2
+
+== Neon Appearance ==
+The [[Neon Pets|Neon]] Sasquatch glows bright orange around its arms and on the fur around its head.
+
+== Mega Neon Appearance ==
+The [[Mega Neons|Mega Neon]] Sasquatch glows in the same areas as the [[Neon Pets|Neon]] Sasquatch, except those areas cycle through the colors of the rainbow.
+
+== Trivia ==
+*The [[Yeti]] features a similar body shape and arms to the Sasquatch.
+*A furniture item known as the "Camping with Friends" (now known as the "Camping with Sasquatch") shows this pet despite this furniture item being released before the pet.
+
+== Gallery ==
+<gallery>
+Sasquatch beta picture.png|The Sasquatch in-game.
+AM neon Sasquatch.jpg|The [[Neon Pets|Neon]] Sasquatch.
+Mega Neon Sasquatch..gif|The [[Mega Neons|Mega Neon]] Sasquatch.
+</gallery>
+
+[[Category:Pets]]
+[[Category:Limited]]
+[[Category:Mythic Egg Pets]]
+[[Category:Rare]]
+[[Category:Rare Pets]]
+[[Category:Unavailable]]
+[[Category:Unavailable Pets]]

@@ -1,0 +1,48 @@
+{{Pets
+|image = BatDragon Pet.png
+|caption = The Bat Dragon in a player's inventory.
+|rarity = Legendary
+|price = {{Candy|180,000}}
+}}
+The '''Bat Dragon''' is a limited legendary [[Pets|pet]] in ''Adopt Me!'' that was released during the [[Halloween Event (2019)]], along with the [[Evil Unicorn]]. It could have been purchased for {{Candy|180,000}} in the Candy Trading Shop.  Since its event has ended, the Bat Dragon is now only obtainable through [[Trade System|trading]].
+
+== Appearance ==
+The Bat Dragon has a light brown body, two small orange horns on its head, two beady black eyes, black bat-like ears with a light brownish color inside, an orange nose on its snout, black and red curved wings, and two small fangs protruding from its mouth. Its underbelly is a light tan color, with the tip of its tail being black with an orange tip that is pointed. It has orange tail spikes on the back of its body.
+
+== Tricks ==
+Here are the tricks the Bat Dragon learns in order:
+*Newborn - Sit
+*Junior - Lay Down
+*Pre-Teen - Joy
+*Teen - Jump
+*Post-Teen - Twirl Around 
+*Full Grown - Triple Flip
+
+== Neon Appearance ==
+The [[Neon Pets|Neon]] Bat Dragon's wings and the tip of its tail glow in a deep neon orange color, while its horns, nose, and the spikes on its tail glow in a light orange color.
+
+== Mega Neon Appearance ==
+The [[Mega Neons|Mega Neon]] Bat Dragon glows in the same areas as the [[Neon Pets|Neon]] Bat Dragon, except those areas cycle through white, magenta, lavender, and turquoise.
+
+== Trivia ==
+*The Bat Dragon has three reskins known as the [[Strawberry Shortcake Bat Dragon]], [[Chocolate Chip Bat Dragon]], and [[Fairy Bat Dragon]].
+
+== Gallery ==
+<gallery>
+Candy Trading Shop Pets.png|The Bat Dragon on display in the Candy Trading Shop, along with the [[Zombie Buffalo]], [[Evil Unicorn]], and [[Shadow Dragon]].
+Bat dragon.png|The Bat Dragon in-game.
+Neon Bat Dragon.png|The [[Neon Pets|Neon]] Bat Dragon.
+Mega Bat Dragon (gif).gif|The [[Mega Neons|Mega Neon]] Bat Dragon.
+Halloween Event (2019) Pt.2 Cover Image .jpg|The Bat Dragon on ''Adopt Me!'''s thumbnail during part two of the [[Halloween Event (2019)]].
+Admin Abuse Thumbnail.png|The Bat Dragon on ''Adopt Me!'''s thumbnail, along with the [[Penguin]].
+</gallery>
+
+[[Category:Pets]]
+[[Category:Halloween Event (2019)]]
+[[Category:Legendary Pets]]
+[[Category:Limited]]
+[[Category:Unavailable Pets]]
+[[Category:Candy]]
+[[Category:Legendary]]
+[[Category:Unavailable]]
+[[Category:Halloween]]

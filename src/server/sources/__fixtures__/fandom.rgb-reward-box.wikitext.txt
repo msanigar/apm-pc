@@ -1,0 +1,110 @@
+{{Eggs
+|image = RGB Reward Box.png
+|caption = The RGB Reward Box in a player’s inventory.
+|price = Free ([[Guide]] or [[Pets|pet]] age-up reward)
+|common = 44%
+|uncommon = 30%
+|rare = 14.5% 
+|ultra-rare = 7%
+|legendary = 4.5%
+}}
+The '''RGB Reward Box''' is a legendary [[Gifts|gift]] in ''Adopt Me!'' that was released during the [[Task Board]] update on January 27, 2022. It can be obtained by completing tasks in the "Pets" section in the [[Guide]]; up to five RGB Reward Boxes are obtainable per account. It can also be obtained as a reward for aging up [[pets]], or through [[Trade System|trading]].
+
+Before November 14, 2025, it could have obtained by completing a task marked with a "flame" icon on the [[Task Board]], which required players to make a [[Neon Pets|Neon]] or [[Mega Neons|Mega Neon]] [[Pets|pet]] as their task, which rewarded one and three RGB Reward Boxes respectively once completed.
+
+Players have a 44% chance to get a common item, a 30% chance to get an uncommon item, a 14.5% chance to get a rare item, a 7% chance to get an ultra-rare [[Vehicles|vehicle]], and a 4.5% chance to get a legendary [[Pets|pet]] from an RGB Reward Box.
+
+== Appearance ==
+The RGB Reward Box features a rainbow box with with a thick black rim and handles. On the front of the box, players can see a multicolored paw.
+
+== Obtainable Items  ==
+{| class="article-table"
+!Item
+!Image
+!Rarity
+!Category
+!Chance
+|-
+|[[RGB Collar]]
+|[[File:RGB Collar.png|70px|center]]
+|Common
+|[[:Category:Pet Accessories|Pet Accessory]]
+|rowspan="3"|44%
+|-
+|[[RGB Friend]]
+|[[File:RGB Friend.png|70px|center]]
+|Common
+|[[Toys]]
+|-
+|[[RGB Sword Rattle]]
+|[[File:RGB Sword Rattle.png|70px|center]]
+|Common
+|[[Toys]]
+|-
+|[[RGB Headset]]
+|[[File:RGB Headset.png|70px|center]]
+|Uncommon
+|[[:Category:Pet Accessories|Pet Accessory]]
+|rowspan="3"|30%
+|-
+|[[RGB Leash]]
+|[[File:RGB Leash.png|70px|center]]
+|Uncommon
+|[[Toys]]
+|-
+|[[RGB Stroller]]
+|[[File:RGB Stroller.png|70px|center]]
+|Uncommon
+|[[Strollers]]
+|-
+|[[RGB Laptop]]
+|[[File:RGB Laptop.png|70px|center]]
+|Rare
+|[[:Category:Pet Accessories|Pet Accessory]]
+|rowspan="3"|14.5%
+|-
+|[[RGB Phone Throw Toy]]
+|[[File:RGB Phone Throw Toy.png|70px|center]]
+|Rare
+|[[Toys]]
+|-
+|[[RGB Propeller]]
+|[[File:RGB Propeller.png|70px|center]]
+|Rare
+|[[Toys]]
+|-
+|[[RGB Monster Truck]]
+|[[File:RGB Monster Truck.png|70px|center]]
+|Ultra-Rare
+|[[Vehicles]]
+|rowspan="2"|7%
+|-
+|[[RGB UFO]]
+|[[File:RGB UFO.png|70px|center]]
+|Ultra-Rare
+|[[Vehicles]]
+|-
+|[[Chameleon]]
+|[[File:Chameleon.png|70px|center]]
+|Legendary
+|[[Pets]]
+|rowspan="2"|4.5%
+|-
+|[[Squid]]
+|[[File:Squid.png|70px|center]]
+|Legendary
+|[[Pets]]
+|}
+
+== Gallery ==
+<gallery>
+Player Holding RGB Reward Box.png|A player holding the RGB Reward Box.
+Pets Guide page 3.png|RGB Reward Boxes in the [[Guide]].
+RGB Reward Boxes on the task board.png|Tasks to obtain the RGB Reward Boxes as seen on the [[Task Board]].
+RGB Reward Boxes on the task board (updated).jpg|Updated appearance of tasks to obtain RGB Reward Boxes as seen on the [[Task Board]].
+RGB Reward Box Rarities.png|The pop-up that appears when selecting the RGB Reward Box, informing the player of the rarity percentages.
+The RGB Reward Box thumbnail.png|The RGB Reward Box on ''Adopt Me!'''s thumbnail.
+</gallery>
+
+[[Category:Legendary]]
+[[Category:Gifts]]

@@ -1,0 +1,46 @@
+{{Pets
+|image = Robin Pet.png
+|rarity = Common
+|caption = The Robin in a player's inventory.
+|price = {{Gingerbread|1,440}} or {{Gingerbread|4,300}} ([[Christmas Egg]])
+}}
+The '''Robin''' is a limited common [[Pets|pet]] in ''Adopt Me!'' that was released on December 14, 2019, as a part of the [[Christmas Event (2019)]]. As it is now unavailable, it can only be obtained by [[Trade System|trading]] or by hatching any remaining [[Christmas Egg]]s.
+
+Players have a 45% chance of hatching a Robin from the [[Christmas Egg]].
+
+== Appearance ==
+The Robin has a dark orange underbelly and part of the face, and the outer area of its body is brown. It has a slightly lighter orange for its legs, black beady eyes, a black beak, and is complete with three tail feathers.
+
+== Tricks ==
+Here are the tricks the Robin learns in order:
+*Newborn - Sit
+*Junior - Lay Down
+*Pre-Teen - Bounce 
+*Teen - Joy
+*Post-Teen - Dance 1
+*Full Grown - Dance 2
+
+== Neon Appearance ==
+The [[Neon Pets|Neon]] Robin glows orange-yellow on the inside of its body, and a slightly darker version of that same color on its feet.
+
+== Mega Neon Appearance ==
+The [[Mega Neons|Mega Neon]] Robin glows in the same areas as the [[Neon Pets|Neon]] Robin, except those areas cycle through the colors of the rainbow.
+
+== Gallery ==
+<gallery>
+Robin display.png|The Robin on display in the [[Christmas Shop]].
+The Robin in-game..png|The Robin in-game.
+Neon Robin.png|The [[Neon Pets|Neon]] Robin.
+Mega Neon Robin (gif).gif|The [[Mega Neons|Mega Neon]] Robin.
+</gallery>
+
+[[Category:Pets]]
+[[Category:Christmas Event (2019)]]
+[[Category:Unavailable Pets]]
+
+[[Category:Christmas]]
+[[Category:Limited]]
+[[Category:Unavailable]]
+[[Category:Common]]
+[[Category:Common Pets]]
+[[Category:Gingerbread]]
