@@ -272,6 +272,9 @@ async function fetchAllPages(
     if (!page?.pets || page.pets.length === 0) break;
     all.push(...page.pets);
     offset += page.pets.length;
+    console.info(
+      `[sync:amverse] page ${pageIdx + 1}: +${page.pets.length} items (${all.length} total)`
+    );
     if (!page.hasMore) break;
   }
   return all;

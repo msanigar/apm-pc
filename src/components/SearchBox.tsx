@@ -6,6 +6,7 @@ type Props = {
   onChange: (value: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  className?: string;
 };
 
 export function SearchBox({
@@ -13,6 +14,7 @@ export function SearchBox({
   onChange,
   placeholder = "Type a pet or item… try \u201CFR Shadow\u201D or \u201CNFR Owl\u201D",
   autoFocus = true,
+  className,
 }: Props) {
   const ref = useRef<HTMLInputElement | null>(null);
 
@@ -21,7 +23,7 @@ export function SearchBox({
   }, [autoFocus]);
 
   return (
-    <label className="block">
+    <label className={className ? `block ${className}` : "block"}>
       <span className="sr-only">Search pets and items</span>
       <div className="group relative">
         {/* Soft gradient halo that brightens on focus. */}

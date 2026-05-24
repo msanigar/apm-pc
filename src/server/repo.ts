@@ -169,6 +169,55 @@ export async function promoteCandidateRows(
   });
 }
 
+function aggregatedKey(itemId: string, variant: string): string {
+  return `${itemId}::${variant}`;
+}
+
+type ExistingAggregatedRow = {
+  valueRp: number;
+  minRp: number | null;
+  maxRp: number | null;
+  sourceCount: number;
+  confidence: string;
+  lastAcceptedAt: string | null;
+};
+
+/** Live aggregated rows keyed by `item_id::variant`. */
+async function loadExistingAggregatedRows(
+  itemIds: string[]
+): Promise<Map<string, ExistingAggregatedRow>> {
+  if (itemIds.length === 0) return new Map();
+
+  const db = requireSupabaseAdmin();
+  const map = new Map<string, ExistingAggregatedRow>();
+  const uniqueIds = [...new Set(itemIds)];
+
+  for (let i = 0; i < uniqueIds.length; i += PG_BULK_CHUNK) {
+    const chunk = uniqueIds.slice(i, i + PG_BULK_CHUNK);
+    const { data, error } = await db
+      .from("aggregated_values")
+      .select(
+        "item_id, variant, value_rp, min_rp, max_rp, source_count, confidence, last_accepted_at"
+      )
+      .in("item_id", chunk);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      map.set(
+        aggregatedKey(row.item_id as string, row.variant as string),
+        {
+          valueRp: Number(row.value_rp),
+          minRp: row.min_rp != null ? Number(row.min_rp) : null,
+          maxRp: row.max_rp != null ? Number(row.max_rp) : null,
+          sourceCount: Number(row.source_count),
+          confidence: row.confidence as string,
+          lastAcceptedAt: (row.last_accepted_at as string | null) ?? null,
+        }
+      );
+    }
+  }
+  return map;
+}
+
 /**
  * For rows held back by validation, record the candidate alongside the live
  * value (which we keep) so an operator can see exactly what we rejected.
@@ -180,25 +229,83 @@ export async function storeSuspiciousCandidates(
 ): Promise<number> {
   if (rows.length === 0) return 0;
 
-  const payload = rows
-    .map((r) => {
-      const itemId = slugToId.get(r.itemSlug);
-      if (!itemId) return null;
-      const agg = aggregateValues(r.values);
-      return {
+  const itemIds: string[] = [];
+  const prepared: Array<{
+    itemId: string;
+    variant: string;
+    agg: ReturnType<typeof aggregateValues>;
+    conf: ReturnType<typeof confidenceFor>;
+  }> = [];
+
+  for (const r of rows) {
+    const itemId = slugToId.get(r.itemSlug);
+    if (!itemId) continue;
+    const agg = aggregateValues(r.values);
+    prepared.push({
+      itemId,
+      variant: r.variant,
+      agg,
+      conf: confidenceFor(agg.sourceCount, agg.minRp, agg.maxRp),
+    });
+    itemIds.push(itemId);
+  }
+
+  const existing = await loadExistingAggregatedRows(itemIds);
+
+  const updatePayload: Record<string, unknown>[] = [];
+  const insertPayload: Record<string, unknown>[] = [];
+
+  for (const { itemId, variant, agg, conf } of prepared) {
+    const key = aggregatedKey(itemId, variant);
+    const live = existing.get(key);
+    if (live) {
+      // Upsert replaces omitted columns with null — carry forward live values.
+      updatePayload.push({
         item_id: itemId,
-        variant: r.variant,
+        variant,
+        value_rp: live.valueRp,
+        min_rp: live.minRp,
+        max_rp: live.maxRp,
+        source_count: live.sourceCount,
+        confidence: live.confidence,
+        last_accepted_at: live.lastAcceptedAt,
         last_candidate_value_rp: agg.valueRp,
         last_candidate_at: now.toISOString(),
         is_suspicious: true,
-      };
-    })
-    .filter(Boolean) as Record<string, unknown>[];
+        calculated_at: now.toISOString(),
+      });
+    } else {
+      // No live row yet — insert must satisfy NOT NULL columns.
+      insertPayload.push({
+        item_id: itemId,
+        variant,
+        value_rp: agg.valueRp,
+        min_rp: agg.minRp,
+        max_rp: agg.maxRp,
+        source_count: agg.sourceCount,
+        confidence: conf,
+        is_suspicious: true,
+        last_candidate_value_rp: agg.valueRp,
+        last_candidate_at: now.toISOString(),
+        calculated_at: now.toISOString(),
+      });
+    }
+  }
 
-  return bulkInsert("aggregated_values", payload, {
-    upsert: true,
-    onConflict: "item_id,variant",
-  });
+  let count = 0;
+  if (updatePayload.length > 0) {
+    count += await bulkInsert("aggregated_values", updatePayload, {
+      upsert: true,
+      onConflict: "item_id,variant",
+    });
+  }
+  if (insertPayload.length > 0) {
+    count += await bulkInsert("aggregated_values", insertPayload, {
+      upsert: true,
+      onConflict: "item_id,variant",
+    });
+  }
+  return count;
 }
 
 export async function recordSourceValues(

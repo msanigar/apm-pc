@@ -59,7 +59,11 @@ export function HomePage() {
         </p>
       </header>
 
-      <SearchBox value={query} onChange={setQuery} />
+      <SearchBox
+        value={query}
+        onChange={setQuery}
+        className="hidden md:block"
+      />
 
       <div className="space-y-2">
         <h2 className="px-1 text-xs font-extrabold uppercase tracking-widest text-slate-500">
@@ -93,6 +97,13 @@ export function HomePage() {
           availableRarities={availableRarities}
         />
       </div>
+
+      <SearchBox
+        value={query}
+        onChange={setQuery}
+        className="md:hidden"
+        autoFocus={false}
+      />
 
       {error && (
         <div className="rounded-3xl border-2 border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">

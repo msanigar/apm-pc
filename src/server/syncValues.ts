@@ -12,7 +12,7 @@ import {
   validateCandidateDataset,
 } from "../shared/validate";
 import type { CandidateDataset, CandidateRow } from "../shared/types";
-import { cacheImagesForRows } from "./images";
+import { cacheImagesForRows, type CacheImagesOptions } from "./images";
 import {
   completeImportRun,
   createImportRun,
@@ -50,6 +50,36 @@ export type SyncOptions = {
   adapters?: SourceAdapter[];
   now?: Date;
 };
+
+/** Log every N image jobs during sync so long backfills don't look hung. */
+const IMAGE_PROGRESS_EVERY = 25;
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  const rem = sec % 60;
+  return rem > 0 ? `${min}m ${rem}s` : `${min}m`;
+}
+
+function beginSyncPhase(label: string): { end: (detail?: string) => void } {
+  const started = Date.now();
+  console.info(`[sync] ${label}…`);
+  return {
+    end(detail?: string) {
+      const suffix = detail ? ` — ${detail}` : "";
+      console.info(`[sync] ${label} done (${formatElapsed(Date.now() - started)})${suffix}`);
+    },
+  };
+}
+
+function imageProgressLogger(): NonNullable<CacheImagesOptions["onProgress"]> {
+  return ({ done, total, slug, status }) => {
+    if (done !== 1 && done !== total && done % IMAGE_PROGRESS_EVERY !== 0) return;
+    console.info(`[sync] images ${done}/${total} — ${slug} (${status})`);
+  };
+}
 
 /**
  * The canonical daily sync. Called by the Netlify scheduled function and by
@@ -93,12 +123,25 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     : await createImportRun();
 
   try {
+    console.info(
+      `[sync] run ${importRun.id} started — ${adapters.length} adapter(s): ${adapters.map((a) => a.name).join(", ")}`
+    );
+
+    const fetchPhase = beginSyncPhase("fetch sources");
     const sourceResults = await Promise.allSettled(
       adapters.map(async (a) => {
-        const values = await a.fetchValues();
-        return { name: a.name, values };
+        const adapterPhase = beginSyncPhase(`  ${a.name}`);
+        try {
+          const values = await a.fetchValues();
+          adapterPhase.end(`${values.length} rows`);
+          return { name: a.name, values };
+        } catch (err) {
+          adapterPhase.end("failed");
+          throw err;
+        }
       })
     );
+    fetchPhase.end();
 
     const raw: RawSourceValue[] = [];
     const successfulSourceNames = new Set<string>();
@@ -141,6 +184,7 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
 
     console.info("[sync] adapter stats:", JSON.stringify(adapterStats));
 
+    const normalizePhase = beginSyncPhase("normalize & build candidate");
     // Build the alias map from our catalog so sources that use shortened
     // names or alternate spellings collapse onto the same canonical slug.
     const aliasMap = buildAliasMap(MOCK_FIXTURES);
@@ -151,13 +195,23 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     // category / rarity / display name / image URL when an item isn't in
     // MOCK_FIXTURES. Last writer wins, but we prefer non-"other" categories.
     const slugMeta = collectSlugMetadata(normalized, raw);
+    normalizePhase.end(
+      `${candidate.rows.length} variant rows, ${slugMeta.size} slugs`
+    );
 
+    const livePhase = beginSyncPhase("load live dataset");
     const live = dryRun
       ? { rows: [] }
       : await loadLiveDataset();
+    livePhase.end(`${live.rows.length} live variant rows`);
 
+    const validatePhase = beginSyncPhase("diff & validate");
     const diff = diffDatasets(live, candidate);
     const validation = validateCandidateDataset(live, candidate, diff);
+    validatePhase.end(
+      `fatal=${validation.fatal} suspicious=${validation.suspiciousKeys.size} ` +
+        `new=${diff.candidateOnly.length} missing=${diff.liveOnly.length}`
+    );
 
     if (dryRun) {
       const deltaRows = validation.fatal
@@ -189,16 +243,24 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
       candidate.rows.map((r) => r.itemSlug),
       slugMeta
     );
+    const itemsPhase = beginSyncPhase("upsert items");
     const slugToId = await upsertItems(itemUpserts);
+    itemsPhase.end(`${slugToId.size} items`);
 
     // 2. Persist validation issues.
+    const issuesPhase = beginSyncPhase("save validation issues");
     await saveValidationIssues(importRun.id, validation.issues, slugToId);
+    issuesPhase.end(`${validation.issues.length} issues`);
 
     if (validation.fatal) {
+      console.warn(`[sync] validation fatal — ${validation.summary}`);
       const deltaRows = selectRowsForDeltaPromotion(
         candidate,
         diff,
         validation
+      );
+      console.info(
+        `[sync] delta promotion: ${deltaRows.length} candidate-only row(s)`
       );
       const { promotedCount, heldBackCount } = await promoteDeltaRows({
         deltaRows,
@@ -254,31 +316,43 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
       candidate,
       validation
     );
+    console.info(
+      `[sync] promote: ${safeRows.length} safe, ${heldBackRows.length} held back (suspicious)`
+    );
 
     // 3. Promote safe rows, hold back suspicious ones.
+    const promotePhase = beginSyncPhase("promote aggregated values");
     const promotedCount = await promoteCandidateRows(safeRows, slugToId, now);
+    promotePhase.end(`${promotedCount} row(s)`);
+
+    const suspiciousPhase = beginSyncPhase("store suspicious candidates");
     const heldBackCount = await storeSuspiciousCandidates(
       heldBackRows,
       slugToId,
       now
     );
+    suspiciousPhase.end(`${heldBackCount} row(s)`);
 
     // 4. Always log raw per-source values for future debugging.
+    const sourceValuesPhase = beginSyncPhase("record source values");
     await recordSourceValues(candidate.rows, slugToId, now);
+    sourceValuesPhase.end(`${candidate.rows.length} candidate row(s)`);
 
     // 5. Cache any source-provided images for the rows we accepted. The
     //    helper is idempotent and only fetches when `items.image_path` is
     //    still NULL, so re-runs don't re-download anything.
     const imageUrls = buildImageUrlMap(slugMeta);
-    const imageResult = await cacheImagesForRows(safeRows, imageUrls);
-    if (imageResult.uploaded > 0 || imageResult.errors > 0) {
-      console.info(
-        `[sync] images: uploaded=${imageResult.uploaded} ` +
-          `skipped_present=${imageResult.skippedAlreadyCached} ` +
-          `skipped_missing=${imageResult.skippedMissingItem} ` +
-          `errors=${imageResult.errors}`
-      );
-    }
+    const imageJobCount = new Set(safeRows.map((r) => r.itemSlug)).size;
+    const imagesPhase = beginSyncPhase(
+      `cache images (up to ${imageJobCount} slugs, ${imageUrls.size} URLs available)`
+    );
+    const imageResult = await cacheImagesForRows(safeRows, imageUrls, {
+      onProgress: imageProgressLogger(),
+    });
+    imagesPhase.end(
+      `uploaded=${imageResult.uploaded} skipped_present=${imageResult.skippedAlreadyCached} ` +
+        `skipped_missing=${imageResult.skippedMissingItem} errors=${imageResult.errors}`
+    );
 
     // 6. Refresh wiki-sourced relationship data, gated by env. Failures
     //    here are logged but never affect the main run's status — values
@@ -289,6 +363,7 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
     //    would exceed scheduled-function time limits. Run it explicitly
     //    via `npm run sync:wiki` (see `scripts/syncWiki.ts`).
     if (isFandomEggsEnabled()) {
+      const eggsPhase = beginSyncPhase("refresh fandom eggs");
       try {
         const payload = await fetchFandomEggs();
         const result = await replaceEggHatchData({
@@ -310,17 +385,18 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
             fetchedAt: payload.fetchedAt,
           })),
         });
-        console.info(
-          `[sync] fandom eggs: ${result.oddsCount} odds rows, ${result.petsCount} pet rows ` +
-            `(eggs=${payload.eggCount}, unmatched=${result.unmatchedEggSlugs.length}, ` +
-            `unresolvedPets=${result.unresolvedPetSlugs.length})`
+        eggsPhase.end(
+          `${result.oddsCount} odds, ${result.petsCount} pets ` +
+            `(eggs=${payload.eggCount})`
         );
       } catch (err) {
+        eggsPhase.end("failed");
         console.warn("[sync] fandom egg refresh failed:", err);
       }
     }
 
     if (isFandomGiftsEnabled()) {
+      const giftsPhase = beginSyncPhase("refresh fandom gifts");
       try {
         const payload = await fetchFandomGifts();
         const result = await replaceItemContentsData({
@@ -344,17 +420,17 @@ export async function syncValues(options: SyncOptions = {}): Promise<SyncReport>
             fetchedAt: payload.fetchedAt,
           })),
         });
-        console.info(
-          `[sync] fandom gifts: ${result.itemsCount} items, ${result.oddsCount} odds rows ` +
-            `(gifts=${payload.giftCount}, unmatched=${result.unmatchedContainerSlugs.length}, ` +
-            `unresolved=${result.unresolvedItemSlugs.length})`
+        giftsPhase.end(
+          `${result.itemsCount} items, ${result.oddsCount} odds (gifts=${payload.giftCount})`
         );
       } catch (err) {
+        giftsPhase.end("failed");
         console.warn("[sync] fandom gift refresh failed:", err);
       }
     }
 
     const status: ImportRunStatus = heldBackRows.length > 0 ? "partial" : "promoted";
+    console.info(`[sync] finishing run ${importRun.id} — status=${status}`);
     await completeImportRun(importRun.id, {
       status,
       sourceCount: successfulSourceNames.size,
@@ -567,15 +643,35 @@ async function promoteDeltaRows(input: {
     deltaDataset,
     validation
   );
+  console.info(
+    `[sync] delta: ${safeRows.length} safe, ${heldBackRows.length} held back`
+  );
+
+  const promotePhase = beginSyncPhase("delta promote aggregated values");
   const promotedCount = await promoteCandidateRows(safeRows, slugToId, now);
+  promotePhase.end(`${promotedCount} row(s)`);
+
+  const suspiciousPhase = beginSyncPhase("delta store suspicious candidates");
   const heldBackCount = await storeSuspiciousCandidates(
     heldBackRows,
     slugToId,
     now
   );
+  suspiciousPhase.end(`${heldBackCount} row(s)`);
+
+  const sourceValuesPhase = beginSyncPhase("delta record source values");
   await recordSourceValues(deltaRows, slugToId, now);
+  sourceValuesPhase.end(`${deltaRows.length} row(s)`);
+
   const imageUrls = buildImageUrlMap(slugMeta);
-  await cacheImagesForRows(safeRows, imageUrls);
+  const imagesPhase = beginSyncPhase("delta cache images");
+  const imageResult = await cacheImagesForRows(safeRows, imageUrls, {
+    onProgress: imageProgressLogger(),
+  });
+  imagesPhase.end(
+    `uploaded=${imageResult.uploaded} skipped_present=${imageResult.skippedAlreadyCached} errors=${imageResult.errors}`
+  );
+
   return { promotedCount, heldBackCount };
 }
 

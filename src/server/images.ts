@@ -238,7 +238,8 @@ export async function cacheImagesForSlugs(
  */
 export async function cacheImagesForRows(
   rows: CandidateRow[],
-  sourceImageUrlsBySlug: Map<string, string>
+  sourceImageUrlsBySlug: Map<string, string>,
+  options?: Pick<CacheImagesOptions, "onProgress">
 ): Promise<CacheImagesResult> {
   const seen = new Set<string>();
   const jobs: ImageJob[] = [];
@@ -249,5 +250,5 @@ export async function cacheImagesForRows(
     if (!url) continue;
     jobs.push({ itemSlug: row.itemSlug, sourceUrl: url });
   }
-  return cacheImagesForSlugs(jobs);
+  return cacheImagesForSlugs(jobs, options);
 }
