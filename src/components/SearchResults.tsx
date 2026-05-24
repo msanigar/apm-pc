@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type Fuse from "fuse.js";
+import type { FuseResult } from "fuse.js";
 import type { ItemCategory, SearchIndexItem, Variant } from "@shared/types";
 import { parseSearchQuery } from "@shared/parseSearchQuery";
-import { sortFuseHits } from "@/lib/searchRank";
+import { sortFuseHits, toFuseHits } from "@/lib/searchRank";
 import { ResultCard } from "./ResultCard";
 import { normalizeRarity } from "@/components/RarityFilter";
 import { getCategoryTheme, getRarityTheme } from "@/lib/theme";
@@ -40,9 +41,9 @@ export function SearchResults({
   const ranked = useMemo(() => {
     if (!parsed.normalizedQuery && !category && !rarity) return [];
 
-    let hits: ReturnType<NonNullable<typeof fuse>["search"]>;
+    let hits: FuseResult<SearchIndexItem>[];
     if (!parsed.normalizedQuery) {
-      hits = items.map((item) => ({ item, score: 0 }));
+      hits = toFuseHits(items);
     } else if (!fuse) {
       return [];
     } else {

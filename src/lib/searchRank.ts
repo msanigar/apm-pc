@@ -1,6 +1,11 @@
 import type { FuseResult } from "fuse.js";
 import type { SearchIndexItem, Variant } from "@shared/types";
 
+/** Build Fuse-shaped hits for browse-only paths (no text query). */
+export function toFuseHits(items: SearchIndexItem[]): FuseResult<SearchIndexItem>[] {
+  return items.map((item, refIndex) => ({ item, score: 0, refIndex }));
+}
+
 /**
  * Sort Fuse hits for display. Text relevance (lower Fuse score = better match)
  * always wins; variant value is only a tie-breaker when the user asked for a
