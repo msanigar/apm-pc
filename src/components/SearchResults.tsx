@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type Fuse from "fuse.js";
 import type { FuseResult } from "fuse.js";
 import type { ItemCategory, SearchIndexItem, Variant } from "@shared/types";
@@ -32,6 +32,9 @@ export function SearchResults({
   pageSize = 25,
 }: Props) {
   const parsed = useMemo(() => parseSearchQuery(query), [query]);
+  const hasActiveSearch =
+    Boolean(parsed.normalizedQuery) || category != null || rarity != null;
+  const resultsAnchorRef = useRef<HTMLDivElement>(null);
 
   /**
    * Compute the full ranked candidate list (not limited). We then slice down
@@ -82,7 +85,23 @@ export function SearchResults({
     setVisibleCount(pageSize);
   }, [parsed.normalizedQuery, parsed.requestedVariant, category, rarity, pageSize]);
 
-  if (!parsed.normalizedQuery && !category && !rarity) {
+  // Jump back to the top of the results when the query or filters change.
+  useEffect(() => {
+    if (!hasActiveSearch) return;
+    resultsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [
+    hasActiveSearch,
+    parsed.normalizedQuery,
+    parsed.requestedVariant,
+    category,
+    rarity,
+    ranked.length,
+  ]);
+
+  const resultsScrollClass =
+    "scroll-mt-[7.5rem] md:scroll-mt-2";
+
+  if (!hasActiveSearch) {
     return <ExamplesPanel items={items} />;
   }
 
@@ -115,7 +134,10 @@ export function SearchResults({
       .filter((s): s is string => Boolean(s))
       .join(" + ");
     return (
-      <div className="rounded-3xl border-2 border-dashed border-brand-200 bg-white/70 p-8 text-center shadow-sm">
+      <div
+        ref={resultsAnchorRef}
+        className={`rounded-3xl border-2 border-dashed border-brand-200 bg-white/70 p-8 text-center shadow-sm ${resultsScrollClass}`}
+      >
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-bubble-100 text-3xl">
           <span aria-hidden className="text-bubble-500">?</span>
         </div>
@@ -150,7 +172,7 @@ export function SearchResults({
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={resultsAnchorRef} className={`space-y-4 ${resultsScrollClass}`}>
       <div className="flex flex-wrap items-center gap-2 px-1 text-xs font-semibold text-slate-500">
         <span>
           Showing <span className="text-slate-700">{visible.length}</span> of{" "}
