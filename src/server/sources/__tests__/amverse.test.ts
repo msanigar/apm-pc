@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseAmversePage } from "../amverse";
+import { amverseApiRoot, parseAmversePage } from "../amverse";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = JSON.parse(
@@ -11,6 +11,14 @@ const FIXTURE = JSON.parse(
     "utf8"
   )
 ) as { pets: unknown[] };
+
+describe("amverseApiRoot", () => {
+  it("strips the /pets suffix for challenge URLs", () => {
+    expect(amverseApiRoot("https://amverse.co/api/pets")).toBe(
+      "https://amverse.co/api"
+    );
+  });
+});
 
 describe("parseAmversePage", () => {
   const rows = parseAmversePage(FIXTURE as any);
@@ -89,6 +97,20 @@ describe("parseAmversePage", () => {
     ];
     const synthRows = parseAmversePage(synthetic as never);
     expect(synthRows[0]?.category).toBe("stroller");
+  });
+
+  it("classifies reward-style boxes as gift (Rubber Ducky Box)", () => {
+    const synthetic = [
+      {
+        petId: "test-rubber-ducky-box",
+        name: "Rubber Ducky Box",
+        rarity: "legendary",
+        imageUrl: null,
+        elve: { rvalue: 1 },
+      },
+    ];
+    const synthRows = parseAmversePage(synthetic as never);
+    expect(synthRows[0]?.category).toBe("gift");
   });
 
   it("classifies plain eggs as 'egg'", () => {

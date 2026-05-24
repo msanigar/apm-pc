@@ -5,19 +5,21 @@ import {
   normalizeSourceValue,
   resolveImageUrl,
   safeAdapter,
+  safeFetch,
 } from "./lib";
 import type { SourceAdapter } from "./types";
 
 /**
  * AMVerse adapter — public JSON API.
  *
+ *   GET https://amverse.co/api/challenge        → { token }
  *   GET https://amverse.co/api/pets?offset=N&limit=M
  *
- * The site bundles a `data.js` script that paginates this endpoint to render
- * the values table. Inspecting the bundle revealed that the API is open to
- * any caller that sets the same Origin/Referer headers the browser does. We
- * follow the same protocol and walk the pages with a hard cap on request
- * count.
+ * AMVerse mirrors Elvebredd values (`elve` block per item). As of 2026 the
+ * `/api/pets` route requires an `X-AMV-Token` header from `/api/challenge`
+ * (HMAC-bound to client IP, ~5-minute window). The site's `api.js` fetches
+ * a challenge token in the browser before paginating; we do the same server-
+ * side at the start of each sync.
  *
  * Each item carries two value sub-objects: `elve` (Elvebredd) and `amvgg`
  * (AMVGG). We only emit Elvebredd values because:
@@ -113,7 +115,9 @@ function inferCategory(name: string): ItemCategory {
   // rather than `egg` (the substring "egg" matches both).
   if (/\bstroller\b/.test(n)) return "stroller";
   if (/\begg\b/.test(n)) return "egg";
-  if (/\b(toy|plushie|sticker|chew toy|rattle|box)\b/.test(n)) return "toy";
+  // Mystery / reward boxes (RGB Reward Box, Rubber Ducky Box, …) — not toys.
+  if (/\b\w+\s+box\b/i.test(n)) return "gift";
+  if (/\b(toy|plushie|sticker|chew toy|rattle)\b/.test(n)) return "toy";
   if (/\bgift\b/.test(n)) return "gift";
   // Food / consumables. Word-boundary matched so we don't grab pet names that
   // happen to contain a food word (e.g. "Pancake Stack" is a pet, "Candy Apple"
@@ -186,21 +190,85 @@ export type AmverseAdapterOptions = {
   maxPages?: number;
 };
 
+type AmverseChallengeResponse = { token?: string };
+
+/** `https://amverse.co/api/pets` → `https://amverse.co/api` */
+export function amverseApiRoot(apiUrl: string): string {
+  return apiUrl.replace(/\/pets\/?$/, "");
+}
+
+function amverseRequestHeaders(token: string): Record<string, string> {
+  return {
+    Origin: "https://amverse.co",
+    Referer: "https://amverse.co/values",
+    Accept: "application/json",
+    "X-AMV-Token": token,
+  };
+}
+
+/**
+ * Fetch a short-lived API token. AMVerse returns 403 on `/api/pets` without it.
+ */
+export async function fetchAmverseChallengeToken(
+  apiUrl: string = AMVERSE_API_URL
+): Promise<string> {
+  const root = amverseApiRoot(apiUrl);
+  const data = await fetchJson<AmverseChallengeResponse>(`${root}/challenge`, {
+    headers: {
+      Origin: "https://amverse.co",
+      Referer: "https://amverse.co/values",
+      Accept: "application/json",
+    },
+  });
+  const token = data?.token?.trim();
+  if (!token) {
+    throw new Error("amverse challenge: response missing token");
+  }
+  return token;
+}
+
+async function fetchAmversePage(
+  url: string,
+  token: string,
+  refreshToken: () => Promise<string>
+): Promise<AmversePage> {
+  const headers = amverseRequestHeaders(token);
+  try {
+    const res = await safeFetch(url, { headers, acceptJson: true });
+    return (await res.json()) as AmversePage;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("403")) throw err;
+    const fresh = await refreshToken();
+    const retry = await safeFetch(url, {
+      headers: amverseRequestHeaders(fresh),
+      acceptJson: true,
+    });
+    return (await retry.json()) as AmversePage;
+  }
+}
+
 async function fetchAllPages(
   apiUrl: string,
   pageSize: number,
   maxPages: number
 ): Promise<AmverseItem[]> {
+  let token = await fetchAmverseChallengeToken(apiUrl);
+  const refreshToken = async () => {
+    token = await fetchAmverseChallengeToken(apiUrl);
+    return token;
+  };
+
   const all: AmverseItem[] = [];
   let offset = 0;
   for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
-    const url = `${apiUrl}?offset=${offset}&limit=${pageSize}`;
-    const page = await fetchJson<AmversePage>(url, {
-      headers: {
-        Origin: "https://amverse.co",
-        Referer: "https://amverse.co/values",
-      },
+    const params = new URLSearchParams({
+      offset: String(offset),
+      limit: String(pageSize),
+      source: "both",
     });
+    const url = `${apiUrl}?${params.toString()}`;
+    const page = await fetchAmversePage(url, token, refreshToken);
     if (!page?.pets || page.pets.length === 0) break;
     all.push(...page.pets);
     offset += page.pets.length;
