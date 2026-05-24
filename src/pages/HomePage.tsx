@@ -98,12 +98,10 @@ export function HomePage() {
         />
       </div>
 
-      <SearchBox
-        value={query}
-        onChange={setQuery}
-        className="md:hidden"
-        autoFocus={false}
-      />
+      {/* Sticks below the site header while scrolling results (mobile only). */}
+      <div className="sticky top-[3.75rem] z-10 -mx-4 border-b border-white/70 bg-white/85 px-4 py-3 backdrop-blur-md md:hidden">
+        <SearchBox value={query} onChange={setQuery} autoFocus={false} />
+      </div>
 
       {error && (
         <div className="rounded-3xl border-2 border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">

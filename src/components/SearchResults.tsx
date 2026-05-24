@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type Fuse from "fuse.js";
 import type { ItemCategory, SearchIndexItem, Variant } from "@shared/types";
 import { parseSearchQuery } from "@shared/parseSearchQuery";
+import { sortFuseHits } from "@/lib/searchRank";
 import { ResultCard } from "./ResultCard";
 import { normalizeRarity } from "@/components/RarityFilter";
 import { getCategoryTheme, getRarityTheme } from "@/lib/theme";
@@ -39,47 +40,34 @@ export function SearchResults({
   const ranked = useMemo(() => {
     if (!parsed.normalizedQuery && !category && !rarity) return [];
 
-    let candidates: SearchIndexItem[];
+    let hits: ReturnType<NonNullable<typeof fuse>["search"]>;
     if (!parsed.normalizedQuery) {
-      candidates = items;
+      hits = items.map((item) => ({ item, score: 0 }));
     } else if (!fuse) {
       return [];
     } else {
-      // Pull a generous Fuse window so filtering doesn't starve the list.
-      // We re-rank below.
-      candidates = fuse
-        .search(parsed.normalizedQuery, { limit: 500 })
-        .map((h) => h.item);
+      // Generous window so category/rarity filters don't starve the list.
+      hits = fuse.search(parsed.normalizedQuery, { limit: 500 });
     }
 
     if (category) {
-      candidates = candidates.filter((i) => i.category === category);
+      hits = hits.filter((h) => h.item.category === category);
     }
     if (rarity) {
-      candidates = candidates.filter(
-        (i) => normalizeRarity(i.rarity) === rarity
+      hits = hits.filter(
+        (h) => normalizeRarity(h.item.rarity) === rarity
       );
     }
 
     const variant = parsed.requestedVariant;
 
-    // If the user gave a specific variant: items that HAVE that variant float
-    // to the top, then sort by that variant's value desc inside each group.
-    if (variant) {
-      return [...candidates].sort((a, b) => {
-        const av = a.values[variant]?.valueRp;
-        const bv = b.values[variant]?.valueRp;
-        if (av != null && bv != null) return bv - av;
-        if (av != null) return -1;
-        if (bv != null) return 1;
-        return 0;
-      });
+    if (parsed.normalizedQuery) {
+      return sortFuseHits(hits, variant);
     }
 
-    // No specific variant requested. If there's a text query we keep Fuse's
-    // relevance order; for pure category/rarity browsing we sort by "top
-    // value" so the most interesting items show up first.
-    if (!parsed.normalizedQuery && (category || rarity)) {
+    // Pure category/rarity browse — sort by top value, not Fuse.
+    const candidates = hits.map((h) => h.item);
+    if (category || rarity) {
       return [...candidates].sort((a, b) => topValueOf(b) - topValueOf(a));
     }
 
