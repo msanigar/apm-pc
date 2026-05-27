@@ -81,6 +81,7 @@ export type ItemUpsert = {
   rarity?: string | null;
   aliases?: string[];
   isHighTier?: boolean;
+  /** Omit to leave `items.image_path` unchanged on conflict. */
   imagePath?: string | null;
 };
 
@@ -109,16 +110,23 @@ export async function loadLiveDataset(): Promise<LiveDataset> {
 export async function upsertItems(items: ItemUpsert[]): Promise<Map<string, string>> {
   if (items.length === 0) return new Map();
   const db = requireSupabaseAdmin();
-  const payload = items.map((i) => ({
-    slug: i.slug,
-    name: i.name,
-    category: i.category,
-    rarity: i.rarity ?? null,
-    aliases: i.aliases ?? [],
-    is_high_tier: i.isHighTier ?? false,
-    image_path: i.imagePath ?? null,
-    updated_at: new Date().toISOString(),
-  }));
+  // Omit `image_path` unless the caller sets `imagePath` — daily sync only
+  // updates catalog metadata; images are written by `cacheImagesForSlugs`.
+  const payload = items.map((i) => {
+    const row: Record<string, unknown> = {
+      slug: i.slug,
+      name: i.name,
+      category: i.category,
+      rarity: i.rarity ?? null,
+      aliases: i.aliases ?? [],
+      is_high_tier: i.isHighTier ?? false,
+      updated_at: new Date().toISOString(),
+    };
+    if (i.imagePath !== undefined) {
+      row.image_path = i.imagePath;
+    }
+    return row;
+  });
   const map = new Map<string, string>();
   // Upsert in chunks; we still need ids back, so we issue a SELECT after.
   for (let i = 0; i < payload.length; i += PG_BULK_CHUNK) {

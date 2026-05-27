@@ -18,6 +18,8 @@
     "sync:wiki": "tsx scripts/syncWiki.ts",
     "sync:eggs": "tsx scripts/syncWiki.ts --skip-gifts --skip-pets",
     "backfill:images": "tsx scripts/backfillImages.ts",
+    "restore:images": "tsx scripts/restoreImagePaths.ts",
+    "diagnose:images": "tsx scripts/diagnoseImages.ts",
     "build:assets": "tsx scripts/buildBrandAssets.ts",
     "wipe:local": "tsx scripts/wipeData.ts",
     "verify:data": "tsx scripts/verifyData.ts",
